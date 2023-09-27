@@ -6,8 +6,8 @@
           <div class="menu">
             <ul class="list" v-infinite-scroll="menu_to_bottom">
               <li class="li" :class="index == menu_index ? 'active' : ''" v-for="(item, index) in menu_list" :key="index"
-                @click="menu_change(item, index)">
-                <img class="img" src="../../assets/images/download_icon.png" />
+                  @click="menu_change(item, index)">
+                <img class="img" src="../assets/images/download_icon.png" />
                 <span class="text over1">{{ item.name }}</span>
                 <el-popover trigger="hover" placement="bottom-start" width="60">
                   <div class="li_ul">
@@ -27,12 +27,12 @@
             </div>
           </div>
         </el-col>
-        <el-col :span="20" class="el_right">
+        <el-col :span="16" class="el_right" style="border-right: 1px solid #ddd">
           <div class="content">
             <div class="content_head">
               <div class="ch_left">
                 <el-upload action="#" accept=".jpg,.jpeg,.png,.gif.JPG,.JPEG,.PBG,.GIF,.mp4,.MP4"
-                  :on-change="upload_change">
+                           :on-change="upload_change">
                   <el-button size="small" type="primary">本地上传</el-button>
                 </el-upload>
               </div>
@@ -48,15 +48,19 @@
                 </div>
               </div>
             </div>
-            <el-table class="table_content" :data="fileList" border height="500" v-loading="loading">
+            <el-table class="table_content"
+                      ref="table"
+                      :data="fileList" border
+                      @row-click="RowClick"
+                      height="500" v-loading="loading">
               <el-table-column type="selection" width="55"></el-table-column>
               <el-table-column prop="url" label="图片">
                 <template slot-scope="scope">
                   <div class="cover">
                     <video class="video" :src="scope.row.url" autoplay muted loop
-                      v-if="scope.row.url.indexOf('.mp4') != -1"></video>
+                           v-if="scope.row.url.indexOf('.mp4') != -1"></video>
                     <el-image class="img" :preview-src-list="[scope.row.url]" :src="scope.row.url" fit="cover"
-                      v-else></el-image>
+                              v-else></el-image>
                   </div>
                 </template>
               </el-table-column>
@@ -65,7 +69,7 @@
               <el-table-column label="操作">
                 <template slot-scope="scope">
                   <el-button class="btn" slot="reference" type="primary" size="mini"
-                    @click="editName(scope.row)">重命名</el-button>
+                             @click="editName(scope.row)">重命名</el-button>
                   <el-popconfirm title="这是一段内容确定删除吗？" @confirm="listDel(scope.row.id)">
                     <el-button type="danger" size="mini" slot="reference">删除</el-button>
                   </el-popconfirm>
@@ -74,10 +78,37 @@
             </el-table>
             <div class="page_content">
               <el-pagination @size-change="handleSizeChange" @current-change="handleCurrentChange"
-                :current-page="currentPage" :page-sizes="[100, 200, 300, 400]" :page-size="100"
-                layout="total, sizes, prev, pager, next, jumper" :total="currentTotal">
+                             :current-page="currentPage" :page-sizes="[100, 200, 300, 400]" :page-size="100"
+                             layout="total, sizes, prev, pager, next, jumper" :total="currentTotal">
               </el-pagination>
             </div>
+          </div>
+        </el-col>
+        <el-col :span="4" class=el_right>
+          <div style="margin: 10px;line-height: 40px;font-size: 16px;text-align: center;">
+            已选择 {{this.rowList.length}}/{{this.Number}}
+            <a style="color: red; margin-left: 10px;" @click="rowList=[]">清空</a>
+          </div>
+          <div style="height:600px;overflowX: hidden;overflowY: auto;border-top: 1px solid #ddd;border-bottom: 1px solid #ddd;">
+            <div class="cover" v-for="item in this.rowList" style="text-align: center;margin: 10PX 0PX;">
+              <video v-if="item.url.indexOf('.mp4') != -1"
+                     class="video" :src="item.url"
+                     style="width: 100px; height: 100px;"
+                     autoplay muted loop
+              ></video>
+              <el-image v-else class="img"
+                        style="width: 100px; height: 100px;"
+                        :preview-src-list="[item.url]"
+                        :src="item.url" fit="contain"
+              ></el-image>
+              <div class="delete-img">
+                <i class="el-icon-close" @click="deleteImg(item)"></i>
+              </div>
+            </div>
+          </div>
+          <div style="text-align: center;line-height: 60px;">
+            <el-button @click="">取消</el-button>
+            <el-button type="primary">确定</el-button>
           </div>
         </el-col>
       </el-row>
@@ -98,15 +129,15 @@
       </span>
     </el-dialog>
 
-    <!-- 预览上传模块弹窗 -->
-    <el-dialog :visible.sync="upload_prev_dialogs" :destroy-on-close="true" :before-close="prev_dialogs_close">
-      <img width="100%" :src="upload_image_url" alt="" v-if="upload_prev_type == 'img'" />
-      <video class="video" :src="upload_video_url" autoplay loop v-else-if="upload_prev_type == 'video'"></video>
-    </el-dialog>
+<!--    &lt;!&ndash; 预览上传模块弹窗 &ndash;&gt;-->
+<!--    <el-dialog :visible.sync="upload_prev_dialogs" :destroy-on-close="true" :before-close="prev_dialogs_close">-->
+<!--      <img width="100%" :src="upload_image_url" alt="" v-if="upload_prev_type == 'img'" />-->
+<!--      <video class="video" :src="upload_video_url" autoplay loop v-else-if="upload_prev_type == 'video'"></video>-->
+<!--    </el-dialog>-->
 
     <!-- 修改命名-弹窗 -->
     <el-dialog :visible.sync="edit_name_dialog_show" :destroy-on-close="true" :before-close="edit_name_dialog_close"
-      width="30%" title="修改名称">
+               width="30%" title="修改名称">
       <div class="edit_box">
         <el-form ref="editForm" :model="form" label-width="80px" :rules="rules">
           <el-form-item label="文件名称" prop="name">
@@ -132,7 +163,7 @@ import {
   upload,
   addList,
   listDel
-} from "../../api/data_list";
+}  from '../api/system/material'
 export default {
   data() {
     return {
@@ -169,6 +200,8 @@ export default {
       currentPage: 1, // 当前页
       currentTotal: 0, //总页数
       disabled: false,
+      rowList:[],
+      Number:10,
     };
   },
   created() {
@@ -333,17 +366,36 @@ export default {
     handleCurrentChange(val) {
       console.log(`当前页: ${val}`);
     },
+    RowClick(row, column, event){
+      var selected = this.rowList.indexOf(row)
+      if(this.rowList.length==this.Number && selected){
+        this.$message({
+          message: '支持选择'+this.Number+'个文件！！！',
+          type: 'error'
+        });
+        return
+      }
+      if (selected) {
+        this.rowList.push(row)
+        this.$refs.table.toggleRowSelection(row, true)
+      } else {
+        this.rowList.splice(selected,1)
+        this.$refs.table.toggleRowSelection(row, false)
+      }
+    },
+    deleteImg(item){
+      console.log(item)
+    },
   },
 };
 </script>
 
 <style lang="scss" scoped>
 .data_list {
-  padding: 20px;
   background: #f5f5f5;
 
   .main {
-    height: calc(100vh - 84px);
+    height: calc(100vh - 250px);
     border: 1px solid #e4e7ed;
     border-radius: 4px;
     background: #fff;
@@ -416,12 +468,10 @@ export default {
       }
 
       .menu_add_box {
-        height: 100px;
-        text-align: center;
-
-        .btn {
-          margin: 10px auto;
-        }
+        height: 60px;
+        display:flex;
+        align-items:center;
+        justify-content:center;
       }
     }
 
@@ -469,6 +519,16 @@ export default {
 
         .cover {
           text-align: center;
+          //.delete-img{
+          //  width: 20px;
+          //  height: 20px;
+          //  position: absolute;
+          //  top: -30px;
+          //  font-size: 18px;
+          //  color: red;
+          //  right: -10px;
+          //  cursor:pointer;
+          //}
         }
 
         .video {
@@ -487,8 +547,10 @@ export default {
       }
 
       .page_content {
-        height: 100px;
-        padding: 10px 0;
+        height: 60px;
+        display:flex;
+        align-items:center;
+        justify-content:left;
       }
     }
   }
@@ -523,4 +585,5 @@ export default {
     margin: 0;
   }
 }
+
 </style>

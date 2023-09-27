@@ -1,44 +1,65 @@
-import request from '@/utils/request'
+// 资源列表
 
-// 查询素材列表
-export function listMaterial(query) {
-  return request({
-    url: '/system/material/list',
-    method: 'get',
-    params: query
-  })
-}
+import request from "@/utils/request";
 
-// 查询素材详细
-export function getMaterial(id) {
+// 添加菜单栏
+export const addMenu = (data) => {
   return request({
-    url: '/system/material/' + id,
-    method: 'get'
-  })
-}
+    url: "/system/material",
+    method: "post",
+    data,
+  });
+};
 
-// 新增素材
-export function addMaterial(data) {
+// 获取列表
+export const MenuList = (data) => {
   return request({
-    url: '/system/material',
-    method: 'post',
-    data: data
-  })
-}
+    url: "/system/material/list",
+    method: "get",
+    data,
+  });
+};
 
-// 修改素材
-export function updateMaterial(data) {
+// 右侧列表
+export const List = (id) => {
   return request({
-    url: '/system/material',
-    method: 'put',
-    data: data
-  })
-}
+    url: "/system/material/" + id,
+    method: "get",
+  });
+};
 
-// 删除素材
-export function delMaterial(id) {
+// 重命名
+export const editName = (data) => {
   return request({
-    url: '/system/material/' + id,
-    method: 'delete'
-  })
-}
+    url: "/system/material",
+    method: "PUT",
+    data,
+  });
+};
+
+// 上传
+export const upload = (data) => {
+  return request({
+    url: "/common/upload",
+    method: "post",
+    data,
+  });
+};
+
+// 插入列表
+export const addList = (data) => {
+  return request({
+    url: "/system/material",
+    method: "post",
+    data,
+  });
+};
+
+
+// 列表删除
+export const listDel = (id) => {
+  return request({
+    url: "/system/material/" + id,
+    method: "DELETE",
+  });
+};

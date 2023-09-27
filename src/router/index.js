@@ -75,20 +75,6 @@ export const constantRoutes = [
     ],
   },
   {
-    path: "",
-    component: Layout,
-    children: [
-      {
-        path: 'dataList',
-        component: () => import('@/views/data_list/index'),
-        meta: {
-          title: '资源管理',
-          icon: 'date'
-        }
-      }
-    ],
-  },
-  {
     path: "/user",
     component: Layout,
     hidden: true,

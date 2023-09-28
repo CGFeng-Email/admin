@@ -184,9 +184,13 @@
       </div>
     </el-dialog>
 
-    <el-dialog title="选择文件" :visible.sync="materialOpen" width="1000px" style="height: 900px;" append-to-body>
-      <materal-dialog />
-    </el-dialog>
+      <materal-dialog
+        :open="materialOpen" @updateOpen="updateOpen"
+        :img="[form.img]" @updateImg="updateImg"
+        :number="number"
+      />
+
+
   </div>
 </template>
 
@@ -236,7 +240,7 @@ export default {
       ],
       // 选择文件弹窗开关
       materialOpen: false,
-
+      number:1,
     }
   },
   created() {
@@ -362,6 +366,12 @@ export default {
     // 打开选择文件弹窗
     openFile(){
       this.materialOpen = true;
+    },
+    updateOpen(newValue){
+      this.materialOpen = newValue
+    },
+    updateImg(newValue){
+      this.form.img = newValue
     },
   }
 }

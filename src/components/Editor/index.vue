@@ -13,6 +13,24 @@
       v-if="this.type == 'url'"
     >
     </el-upload>
+    <!--  文件选择弹窗-->
+    <material-dialog
+      :dialogOpen="materialOpen" @updateDialogOpen="updateDialogOpen"
+      :img="img" @updateImg="updateImg"
+      :number="number"
+    />
+<!--    &lt;!&ndash; 视频播放弹窗&ndash;&gt;-->
+<!--    <el-dialog-->
+<!--      title="视频播放"-->
+<!--      :visible.sync="dialogVisible"-->
+<!--      width="50%">-->
+<!--      <video class="video" :src="dialogUrl" width="100%"-->
+<!--             controls />-->
+
+<!--      <span slot="footer" class="dialog-footer">-->
+<!--        <el-button type="primary" @click="dialogVisible = false">关 闭</el-button>-->
+<!--      </span>-->
+<!--    </el-dialog>-->
     <div class="editor" ref="editor" :style="styles"></div>
   </div>
 </template>
@@ -23,9 +41,14 @@ import "quill/dist/quill.core.css";
 import "quill/dist/quill.snow.css";
 import "quill/dist/quill.bubble.css";
 import { getToken } from "@/utils/auth";
+import MaterialDialog from '../../views/MaterialDialog'
+
+import ImageResize from 'quill-image-resize-module'
+Quill.register('modules/imageResize', ImageResize)
 
 export default {
   name: "Editor",
+  components: { MaterialDialog },
   props: {
     /* 编辑器的内容 */
     value: {
@@ -52,7 +75,7 @@ export default {
       type: Number,
       default: 5,
     },
-    /* 类型（base64格式、url格式） */
+    /* 类型（base64格式、url格式、custom自定义） */
     type: {
       type: String,
       default: "url",
@@ -72,7 +95,16 @@ export default {
         debug: "warn",
         modules: {
           // 工具栏配置
-          toolbar: [
+          imageResize: {   //图片修改
+            displayStyles: {   //添加
+              backgroundColor: 'black',
+              border: 'none',
+              color: 'white'
+            },
+            modules: ['Resize', 'DisplaySize', 'Toolbar']   //添加
+          },
+          toolbar: {
+            container: [
             ["bold", "italic", "underline", "strike"],       // 加粗 斜体 下划线 删除线
             ["blockquote", "code-block"],                    // 引用  代码块
             [{ list: "ordered" }, { list: "bullet" }],       // 有序、无序列表
@@ -82,12 +114,26 @@ export default {
             [{ color: [] }, { background: [] }],             // 字体颜色、字体背景颜色
             [{ align: [] }],                                 // 对齐方式
             ["clean"],                                       // 清除文本格式
-            ["link", "image", "video"]                       // 链接、图片、视频
+            // "link"链接、"image"图片、"video"视频
+            [{MaterialDialog:'选择文件'}],  // 选择文件窗口
           ],
+            handlers:{
+              MaterialDialog: this.openFile
+            }
+          },
+
         },
         placeholder: "请输入内容",
         readOnly: this.readOnly,
       },
+      // 选择文件弹窗开关
+      materialOpen: false,
+      // 选择文件个数
+      number:0,
+      dialogVisible:false,
+      dialogUrl:null,
+      // 传递图片
+      img: [],
     };
   },
   computed: {
@@ -114,6 +160,12 @@ export default {
       },
       immediate: true,
     },
+    currentValue:{
+      handler(val) {
+        this.$emit("updateValue",val)
+      },
+      immediate: true,
+    }
   },
   mounted() {
     this.init();
@@ -155,6 +207,9 @@ export default {
       this.Quill.on("editor-change", (eventName, ...args) => {
         this.$emit("on-editor-change", eventName, ...args);
       });
+      const dialog = document.getElementsByClassName('ql-MaterialDialog')[0]
+      dialog.innerHTML  = "插入"
+      dialog.style.width = '50px'
     },
     // 上传前校检格式和大小
     handleBeforeUpload(file) {
@@ -186,6 +241,35 @@ export default {
     handleUploadError() {
       this.$message.error("图片插入失败");
     },
+
+    // 打开选择文件弹窗
+    openFile(){
+      this.materialOpen = true;
+    },
+    updateDialogOpen(newValue){
+      this.materialOpen = newValue
+    },
+    // updateImg(newValue){
+    //   this.form.img = newValue
+    //   this.setSrcList(this.form.img)
+    // },
+    updateImg(newValue){
+      newValue.forEach(item=>{
+        // 获取光标所在位置
+        let index = this.Quill.getSelection(true).index || 1
+        console.log(index)
+        // 在光标所在位置插入图片
+        const data = { ops: [{ retain: index },{ insert: { image: item.url } }] }
+        this.Quill.updateContents(data)
+        // 调整光标到最后
+        this.Quill.setSelection(index + 1);
+      })
+
+    },
+    handleOpen(url){
+      this.dialogVisible = true
+      this.dialogUrl = url
+    }
   },
 };
 </script>
@@ -269,4 +353,5 @@ export default {
 .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="monospace"]::before {
   content: "等宽字体";
 }
+
 </style>

@@ -1,8 +1,9 @@
 <template>
   <div>
-    <el-dialog title="选择文件" :visible.sync="open"
+    <el-dialog title="选择文件" :visible="dialogOpen"
                width="1000px" style="height: 900px;"
-               @close="updateOpen"
+               @open="openDialog"
+               @close="cloneDialog"
                append-to-body>
       <div class="main">
         <el-row class="el_row">
@@ -27,7 +28,7 @@
                 </li>
               </ul>
               <div class="menu_add_box">
-                <el-button class="btn" type="primary" @click="add_dialog_show = true">添加新文件</el-button>
+                <el-button class="btn" type="primary" @click="add_dialog_show = true">添加文件夹</el-button>
               </div>
             </div>
           </el-col>
@@ -36,13 +37,19 @@
               <div class="content_head">
                 <div class="ch_left">
                   <el-upload action="#" accept=".jpg,.jpeg,.png,.gif.JPG,.JPEG,.PBG,.GIF,.mp4,.MP4"
-                             :on-change="upload_change">
+                             :show-file-list="false"
+                             :on-change="upload_change" :multiple="true" :auto-upload="false">
                     <el-button size="small" type="primary">本地上传</el-button>
                   </el-upload>
                 </div>
                 <div class="ch_right">
-                  <el-input placeholder="请输入搜索内容" v-model="keyword" class="input-with-select">
-                    <el-button slot="append" icon="el-icon-search"></el-button>
+                  <el-input
+                    v-model="keyword"
+                    placeholder="请输入搜索内容"
+                    clearable
+                    @keyup.enter.native="handleQuery"
+                  >
+                    <el-button slot="append" icon="el-icon-search" @click="handleQuery"></el-button>
                   </el-input>
                   <div class="icon_box" :class="type_index == 0 ? 'active' : ''">
                     <i class="icon el-icon-s-order"></i>
@@ -53,83 +60,94 @@
                 </div>
               </div>
               <el-table class="table_content"
-                        ref="table"
-                        :data="fileList" border
-                        @row-click="RowClick"
-                        height="500" v-loading="loading">
-                <el-table-column type="selection" width="55"></el-table-column>
-                <el-table-column prop="url" label="图片">
+                        :data="fileList"
+                        border height="500" v-loading="loading">
+                <el-table-column type="selection" width="55" align="center" />
+                <el-table-column prop="url" align="center" label="文件">
                   <template slot-scope="scope">
                     <div class="cover">
-                      <video v-if="scope.row.url.indexOf('.mp4') != -1"
-                             class="video" :src="scope.row.url"
-                             autoplay muted loop></video>
-                      <el-image v-else class="img"
-                                :preview-src-list="[scope.row.url]"
-                                :src="scope.row.url" fit="contain"
-                      ></el-image>
+                      <a v-if="scope.row.url.indexOf('.mp4') != -1"
+                         @click="handleOpen(scope.row.url)">
+                        <video class="video" :src="scope.row.url"
+                               width="100" height="100" />
+                      </a>
+                      <el-image class="img" :preview-src-list="[scope.row.url]" :src="scope.row.url" fit="cover"
+                                v-else></el-image>
+                      <!--                    <Display :displayType="0" :displayData="scope.row.url" />-->
                     </div>
                   </template>
                 </el-table-column>
-                <el-table-column prop="name" label="名称"></el-table-column>
-                <el-table-column prop="createTime" label="上传日期"></el-table-column>
-                <el-table-column label="操作">
+                <el-table-column prop="name" align="center" label="名称"></el-table-column>
+                <el-table-column prop="createTime" align="center" label="上传日期"></el-table-column>
+                <el-table-column label="操作" align="center">
                   <template slot-scope="scope">
                     <el-button class="btn" slot="reference" type="primary" size="mini"
                                @click="editName(scope.row)">重命名</el-button>
-                    <el-popconfirm title="这是一段内容确定删除吗？" @confirm="listDel(scope.row.id)">
+                    <el-popconfirm title="确定删除该文件吗？" @confirm="listDel(scope.row.id)">
                       <el-button type="danger" size="mini" slot="reference">删除</el-button>
                     </el-popconfirm>
                   </template>
                 </el-table-column>
               </el-table>
-              <div class="page_content">
-                <el-pagination @size-change="handleSizeChange" @current-change="handleCurrentChange"
-                               :current-page="currentPage" :page-sizes="[100, 200, 300, 400]" :page-size="100"
-                               layout="total, sizes, prev, pager, next, jumper" :total="currentTotal">
-                </el-pagination>
-              </div>
+              <pagination
+                class="page_content"
+                v-show="total>0"
+                :total="total"
+                :page.sync="MaterialQueryParams.pageNum"
+                :limit.sync="MaterialQueryParams.pageSize"
+                @pagination="getList"
+              />
             </div>
           </el-col>
-          <el-col :span="4" class=el_right>
-            <div style="margin: 10px;line-height: 40px;font-size: 16px;text-align: center;">
-              已选择 {{img.length}}/{{number}}
+          <el-col :span="4" class="el_right" style="display: flex;flex-direction: column;">
+            <div v-if="number == 0" style="margin: 10px;line-height: 40px;font-size: 16px;text-align: center;">
+              已选择 {{tableList.length}}
               <a style="color: red; margin-left: 10px;" @click="cloneImg">清空</a>
             </div>
-            <div style="height:600px;overflowX: hidden;overflowY: auto;border-top: 1px solid #ddd;border-bottom: 1px solid #ddd;">
+            <div v-else style="margin: 10px;line-height: 40px;font-size: 16px;text-align: center;">
+              已选择 {{tableList.length}}/{{number}}
+              <a style="color: red; margin-left: 10px;" @click="cloneImg">清空</a>
+            </div>
+            <div style="flex:1;overflowX: hidden;overflowY: auto;border-top: 1px solid #ddd;border-bottom: 1px solid #ddd;">
               <div class="cover"
                    @mouseenter="handleMouseEnter"
                    @mouseleave="handleMouseLeave"
-                   v-for="item in img">
-                <video v-if="item.indexOf('.mp4')!= -1"
-                       class="video" :src="item"
-                       autoplay muted loop></video>
+                   v-for="item in tableList">
+                <video v-if="item.url.indexOf('.mp4')!= -1"
+                       class="video" :src="item.url"
+                       width="100"></video>
                 <el-image v-else class="img"
-                          :preview-src-list="[item]"
-                          :src="item" fit="contain"></el-image>
+                          :preview-src-list="[item.url]"
+                          :src="item.url" fit="contain"></el-image>
                 <a class="delete-icon el-icon-close"
-                   v-if="isHovered" @click="RowClick({'url':item})" />
+                   v-if="isHovered" @click="RowClick(item)" />
               </div>
             </div>
             <div style="text-align: center;line-height: 60px;">
-              <el-button @click="">取消</el-button>
-              <el-button type="primary">确定</el-button>
+              <el-button @click="cloneDialog">取消</el-button>
+              <el-button @click="cloneDialog(true)" type="primary">确定</el-button>
             </div>
           </el-col>
         </el-row>
       </div>
 
       <!-- 新增文件弹窗 -->
-      <el-dialog title="添加新文件" :visible.sync="add_dialog_show" :before-close="edit_name_dialog_close" width="30%">
+      <el-dialog
+        title="添加文件夹"
+        :visible.sync="add_dialog_show"
+        :before-close="edit_name_dialog_close"
+        append-to-body
+        :destroy-on-close="true"
+        width="30%">
         <div class="content">
-          <el-form ref="addform" :model="form" label-width="80px" :rules="rules">
-            <el-form-item label="文件名称" prop="name">
+          <el-form ref="addform" :model="form" label-width="100px" :rules="rules">
+            <el-form-item label="文件夹名称" prop="name">
               <el-input v-model="form.name" clearable maxlength="20"></el-input>
             </el-form-item>
           </el-form>
         </div>
         <span slot="footer" class="dialog-footer">
-          <el-button @click="edit_name_dialog_close">取 消</el-button>
+          <el-button @click="open =false">取 消</el-button>
           <el-button type="primary" @click="add_dialogs_submit">确 定</el-button>
         </span>
       </el-dialog>
@@ -141,7 +159,10 @@
   <!--    </el-dialog>-->
 
       <!-- 修改命名-弹窗 -->
-      <el-dialog :visible.sync="edit_name_dialog_show" :destroy-on-close="true" :before-close="edit_name_dialog_close"
+      <el-dialog :visible.sync="edit_name_dialog_show"
+                 @close="edit_name_dialog_close"
+                 append-to-body
+                 :destroy-on-close="true"
                width="30%" title="修改名称">
       <div class="edit_box">
         <el-form ref="editForm" :model="form" label-width="80px" :rules="rules">
@@ -156,6 +177,20 @@
         <el-button type="primary" @click="edit_name_dialog_confirm">确 定</el-button>
       </div>
     </el-dialog>
+
+      <!-- 视频播放弹窗-->
+      <el-dialog
+        title="视频播放" width="50%"
+        :visible.sync="dialogVisible"
+        append-to-body>
+        <video class="video" :src="dialogUrl" width="100%"
+               controls />
+
+        <span slot="footer" class="dialog-footer">
+        <el-button type="primary" @click="dialogVisible = false">关 闭</el-button>
+      </span>
+      </el-dialog>
+
     </el-dialog>
   </div>
 </template>
@@ -172,13 +207,13 @@ import {
 }  from '../api/system/material'
 export default {
   props:{
-    open: {
+    dialogOpen: {
       type: Boolean,
       default: false
     },
     img: {
       type: Array,
-      default: []
+      default: ()=>[]
     },
     number: {
       type: Number,
@@ -217,10 +252,21 @@ export default {
       },
       loading: false, // 加载
       fileList: [], // 上传文件列表
-      currentPage: 1, // 当前页
-      currentTotal: 0, //总页数
       disabled: false,
       isHovered: false,
+      tableList:[], // 选中图片数组
+      open: false,
+      // 总条数
+      total: 0,
+      // 查询参数
+      MaterialQueryParams: {
+        pageNum: 1,
+        pageSize: 10,
+        id: null,
+        name: null,
+      },
+      dialogVisible:false,
+      dialogUrl:null,
     };
   },
   created() {
@@ -236,11 +282,7 @@ export default {
       console.log("菜单列表", res);
       if (res.code == 200) {
         this.menu_list = res.data;
-        if (res.data.length > 0 && flag == false) {
-          this.getList(res.data[0].id);
-        } else {
-          this.getList(this.menu_list[this.menu_index].id)
-        }
+        this.getList()
       } else {
         this.$message.error(res.msg);
       }
@@ -248,14 +290,19 @@ export default {
     // 左侧菜单栏，change
     menu_change(item, index) {
       this.menu_index = index;
-      this.getList(item.id);
+      this.getList();
     },
     // 列表
-    async getList(id) {
+    async getList() {
       this.loading = true;
-      const res = await List(id);
+      if (this.menu_index>=this.menu_list.length){
+        this.menu_index = 0
+      }
+      this.MaterialQueryParams.id = this.menu_list[this.menu_index].id
+      const res = await List(this.MaterialQueryParams);
       console.log("列表", res);
-      this.fileList = res.data;
+      this.fileList = res.rows;
+      this.total = res.total;
       this.loading = false;
     },
     // 左侧菜单栏，触底
@@ -288,6 +335,7 @@ export default {
               message: "修改名称成功",
               type: "success",
             });
+
           } else {
             this.$message.error(res.msg);
           }
@@ -321,14 +369,13 @@ export default {
             type: "0",
             name: this.form.name,
           });
-          console.log("res", res);
           if (res.code == 200) {
             // 重新加载
             await this.getMenuListFn(true);
             // 初始化
             await this.edit_name_dialog_close();
             this.$message({
-              message: "添加新模块成功",
+              message: "添加文件夹成功",
               type: "success",
             });
           } else {
@@ -338,25 +385,23 @@ export default {
       });
     },
     // 本地上传
-    async upload_change(file) {
+    upload_change(file) {
       if (file.status !== "ready") return;
       console.log("本地上传", file);
 
       let formData = new FormData();
       formData.append("file", file.raw);
 
-      const res = await upload(formData);
-
-      const id = this.menu_list[this.menu_index].id;
-
-      const res2 = await addList({
-        parentId: id,
-        type: 1,
-        name: res.originalFilename,
-        url: res.url,
+      upload(formData).then(res=>{
+        const data = {
+          parentId: this.menu_list[this.menu_index].id,
+          type: 1,
+          name: res.originalFilename,
+          url: res.fileName,
+        }
+        addList(data);
+        this.getList();
       });
-
-      this.getList(id);
     },
     // 列表重命名
     async editName(e) {
@@ -368,7 +413,7 @@ export default {
     async listDel(id) {
       const res = await listDel(id);
       if (res.code == 200) {
-        this.getMenuListFn(true)
+        this.getMenuListFn(false)
         this.$message({
           message: "删除成功",
           type: "success",
@@ -377,31 +422,35 @@ export default {
         this.$message.error(res.msg);
       }
     },
-    // 每页
-    handleSizeChange(val) {
-      console.log(`每页 ${val} 条`);
-    },
-    // 当前页
-    handleCurrentChange(val) {
-      console.log(`当前页: ${val}`);
-    },
     // 选择图片方法
     RowClick(row, column, event){
-      console.log(this.img)
-      console.log(row)
-      const selected = this.img.indexOf(row.url)
-      console.log(selected)
-      if(this.img.length==this.number && selected){
-        this.$message({
-          message: '支持选择'+this.number+'个文件！！！',
-          type: 'error'
-        });
-        return
-      }
-      if (selected){
-
-      }else{
-        this.$emit("updateImg",[])
+      if (this.number == 0){
+        this.tableList.push({id:row.id,url:row.url})
+        this.$refs.table.toggleRowSelection(row, true)
+      } else if (this.number == 1){
+        this.cloneImg()
+        this.tableList = [{id:row.id,url:row.url}]
+        this.$refs.table.toggleRowSelection(row, true)
+      } else {
+        const selected = this.tableList.some(item=>item.id == row.id)
+        if(this.tableList.length==this.number && !selected){
+          this.$message({
+            message: '支持选择'+this.number+'个文件！！！',
+            type: 'error'
+          });
+          return
+        }
+        if (selected){
+          this.tableList.some((item,index) =>{
+            if (item.id == row.id){
+              this.tableList.splice(index,1)
+            }
+          })
+          this.$refs.table.toggleRowSelection(row, false)
+        }else{
+          this.tableList.push({id:row.id,url:row.url})
+          this.$refs.table.toggleRowSelection(row, true)
+        }
       }
     },
     // 移到图片上出现删除图标
@@ -411,14 +460,46 @@ export default {
     handleMouseLeave() {
       this.isHovered = false;
     },
-    updateOpen() {
-      this.$emit('updateOpen', false);
+    openDialog(){
+      this.menu_change(this.menu_list[0],0)
+      this.tableList = []
+      if(this.img.length>0){
+        this.img.forEach(item => this.tableList.push(item))
+      }
+      if (this.tableList.length==0){
+        this.fileList.forEach(item => this.$refs.table.toggleRowSelection(item, false))
+      }else {
+        this.fileList.forEach(item => this.selectable(item))
+      }
+    },
+    cloneDialog(flag=false) {
+      this.$emit('updateDialogOpen', false);
+      this.MaterialQueryParams.name = null
+      if(flag){
+        this.$emit('updateImg', this.tableList);
+      }
     },
     cloneImg(){
-      console.log(this.img)
-      const arr = []
-      this.$emit('updateImg', arr);
-      console.log(this.img)
+      this.tableList = []
+      this.fileList.forEach(item =>{
+        this.$refs.table.toggleRowSelection(item, false)
+      })
+    },
+    selectable(row, column, cellValue, index){
+      this.tableList.forEach(item =>{
+        if (row.id == item.id){
+          this.$refs.table.toggleRowSelection(row, true)
+        }
+      })
+      return row.name
+    },
+    handleOpen(url){
+      this.dialogVisible = true
+      this.dialogUrl = url
+    },
+    handleQuery(){
+      this.MaterialQueryParams.name = this.keyword
+      this.getList()
     }
   },
 };

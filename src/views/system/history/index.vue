@@ -2,27 +2,23 @@
   <div class="app-container">
     <el-form :model="queryParams" ref="queryForm" size="small" :inline="true" v-show="showSearch" label-width="68px">
       <el-form-item label="年份" prop="year">
-        <el-select v-model="queryParams.year" placeholder="请选择">
+        <el-select
+          v-model="queryParams.year"
+          placeholder="请选择年份"
+          clearable
+        >
           <el-option
-            v-for="item in options"
-            :key="item"
-            :label="item"
-            :value="item">
-          </el-option>
+            v-for="dict in dicts"
+            :key="dict"
+            :label="dict"
+            :value="dict"
+          />
         </el-select>
       </el-form-item>
       <el-form-item label="名称" prop="name">
         <el-input
           v-model="queryParams.name"
           placeholder="请输入名称"
-          clearable
-          @keyup.enter.native="handleQuery"
-        />
-      </el-form-item>
-      <el-form-item label="介绍" prop="intro">
-        <el-input
-          v-model="queryParams.intro"
-          placeholder="请输入介绍"
           clearable
           @keyup.enter.native="handleQuery"
         />
@@ -81,13 +77,36 @@
 
     <el-table v-loading="loading" :data="historyList" @selection-change="handleSelectionChange">
       <el-table-column type="selection" width="55" align="center" />
+      <el-table-column label="图片" align="center" prop="img">
+        <template slot-scope="scope">
+          <el-image
+            v-if="scope.row.img.length == 0"
+            style="width: 100px; height: 100px"
+          >
+            <div slot="error" class="image-slot" style="background: #F5F7FA;line-height: 100px;">
+              暂无图片
+            </div>
+          </el-image>
+          <a v-else-if="scope.row.img[0].url.indexOf('.mp4') != -1"
+             @click="handleOpen(scope.row.img[0].url)">
+            <video class="video" :src="scope.row.img[0].url"
+                   width="100" height="100" />
+          </a>
+          <el-image
+            v-else
+            style="width: 100px; height: 100px"
+            fit="scale-down"
+            :src="scope.row.img[0].url"
+            :preview-src-list="srcList"
+            @click="setSrcList(scope.row.img)"
+          />
+        </template>
+      </el-table-column>
       <el-table-column label="年份" align="center" prop="year" />
       <el-table-column label="名称" align="center" prop="name" />
-      <el-table-column label="图片" align="center" prop="img" />
-      <el-table-column label="介绍" align="center" prop="intro" />
-      <el-table-column label="创建时间" align="center" prop="createTime" width="180">
+      <el-table-column label="介绍" align="left" prop="intro" >
         <template slot-scope="scope">
-          <span>{{ parseTime(scope.row.createTime, '{y}-{m}-{d}') }}</span>
+          <div v-html="scope.row.intro" />
         </template>
       </el-table-column>
       <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
@@ -119,7 +138,7 @@
     />
 
     <!-- 添加或修改发展历程对话框 -->
-    <el-dialog :title="title" :visible.sync="open" width="500px" append-to-body>
+    <el-dialog :title="title" :visible.sync="HistoryOpen" width="50%" append-to-body>
       <el-form ref="form" :model="form" :rules="rules" label-width="80px">
         <el-form-item label="年份" prop="year">
           <el-input v-model="form.year" placeholder="请输入年份" />
@@ -128,10 +147,33 @@
           <el-input v-model="form.name" placeholder="请输入名称" />
         </el-form-item>
         <el-form-item label="图片" prop="img">
-          <el-input v-model="form.img" placeholder="请输入图片" />
+          <p class="margin0" style="padding-bottom: 10px;">
+            <el-button @click="openFile()">选择文件</el-button>
+          </p>
+          <span v-for="item in form.img">
+            <el-image
+              v-if="item.url == undefined"
+              style="width: 100px; height: 100px"
+              fit="scale-down"
+              src=""
+            />
+            <a v-else-if="item.url.indexOf('.mp4') != -1"
+               @click="handleOpen(item.url)">
+              <video class="video" :src="item.url"
+                     width="100" height="100" />
+            </a>
+            <el-image
+              v-else
+              style="width: 100px; height: 100px"
+              fit="scale-down"
+              :src="item.url"
+              :preview-src-list="srcList"
+            />
+          </span>
         </el-form-item>
         <el-form-item label="介绍" prop="intro">
-          <el-input v-model="form.intro" type="textarea" placeholder="请输入内容" />
+          <Editor v-model="form.intro" :type="'custom'"
+                  :height="350" :minHeight="350" />
         </el-form-item>
       </el-form>
       <div slot="footer" class="dialog-footer">
@@ -139,14 +181,36 @@
         <el-button @click="cancel">取 消</el-button>
       </div>
     </el-dialog>
+
+
+    <!--  文件选择弹窗-->
+    <material-dialog
+      :dialogOpen="materialOpen" @updateDialogOpen="updateDialogOpen"
+      :img="form.img" @updateImg="updateImg"
+      :number="number"
+    />
+    <!-- 视频播放弹窗-->
+    <el-dialog
+      title="视频播放"
+      :visible.sync="dialogVisible"
+      width="50%">
+      <video class="video" :src="dialogUrl" width="100%"
+             controls />
+
+      <span slot="footer" class="dialog-footer">
+        <el-button type="primary" @click="dialogVisible = false">关 闭</el-button>
+      </span>
+    </el-dialog>
   </div>
 </template>
 
 <script>
 import { listHistory, getHistory, delHistory, addHistory, updateHistory } from "@/api/system/history";
+import MaterialDialog from '../../MaterialDialog'
 
 export default {
   name: "History",
+  components: { MaterialDialog },
   data() {
     return {
       // 遮罩层
@@ -166,34 +230,40 @@ export default {
       // 弹出层标题
       title: "",
       // 是否显示弹出层
-      open: false,
+      HistoryOpen: false,
       // 查询参数
       queryParams: {
         pageNum: 1,
         pageSize: 10,
         year: null,
         name: null,
-        intro: null,
       },
       // 表单参数
       form: {},
       // 表单校验
       rules: {
         year: [
-          { required: true, message: "年份不能为空", trigger: "blur" },
-          { message: '请输入年份', pattern: /^[1-9]\d*$/ }
+          { required: true, message: "年份不能为空", trigger: "blur" }
         ],
         name: [
           { required: true, message: "名称不能为空", trigger: "blur" }
         ],
-        img: [
-          { required: true, message: "图片不能为空", trigger: "blur" }
-        ],
         intro: [
           { required: true, message: "介绍不能为空", trigger: "blur" }
         ],
+        // img: [
+        //   { required: true, message: "图片不能为空", trigger: "blur" }
+        // ],
       },
-      options:[],
+      srcList:['#'],
+      dicts: null,
+      arr: [],
+      // 选择文件弹窗开关
+      materialOpen: false,
+      // 选择文件个数
+      number:1,
+      dialogVisible:false,
+      dialogUrl:null,
     };
   },
   created() {
@@ -203,21 +273,27 @@ export default {
     /** 查询发展历程列表 */
     getList() {
       this.loading = true;
+      listHistory().then(response => {
+        response.rows.forEach(item => {
+          this.arr.push(item.year)
+        })
+        this.dicts = Array.from(new Set(this.arr)).sort()
+      });
       listHistory(this.queryParams).then(response => {
         this.historyList = response.rows;
+        this.historyList.forEach(item => {
+          item.img = JSON.parse(item.img)
+          item.intro = decodeURIComponent(item.intro)
+        })
         this.total = response.total;
         this.loading = false;
-        response.rows.forEach(item => {
-          if(!this.options.includes(item.year)){
-            this.options.push(item.year)
-          }
-        })
       });
     },
     // 取消按钮
     cancel() {
-      this.open = false;
+      this.HistoryOpen = false;
       this.reset();
+      this.getList()
     },
     // 表单重置
     reset() {
@@ -225,8 +301,8 @@ export default {
         id: null,
         year: null,
         name: null,
-        img: null,
         intro: null,
+        img: null,
         createBy: null,
         createTime: null,
         updateBy: null,
@@ -254,7 +330,7 @@ export default {
     /** 新增按钮操作 */
     handleAdd() {
       this.reset();
-      this.open = true;
+      this.HistoryOpen = true;
       this.title = "添加发展历程";
     },
     /** 修改按钮操作 */
@@ -263,25 +339,32 @@ export default {
       const id = row.id || this.ids
       getHistory(id).then(response => {
         this.form = response.data;
-        this.open = true;
+        this.HistoryOpen = true;
         this.title = "修改发展历程";
+        this.form.img = JSON.parse(this.form.img)
+        this.form.intro = decodeURIComponent(this.form.intro)
+        this.setSrcList(this.form.img)
       });
     },
     /** 提交按钮 */
     submitForm() {
       this.$refs["form"].validate(valid => {
         if (valid) {
+          this.form.intro = encodeURIComponent(this.form.intro)
+          if (this.form.img !== null){
+            this.form.img = JSON.stringify(this.form.img)
+          }else {
+            this.form.img = JSON.stringify([])
+          }
           if (this.form.id != null) {
             updateHistory(this.form).then(response => {
               this.$modal.msgSuccess("修改成功");
-              this.open = false;
-              this.getList();
+              this.cancel()
             });
           } else {
             addHistory(this.form).then(response => {
               this.$modal.msgSuccess("新增成功");
-              this.open = false;
-              this.getList();
+              this.cancel()
             });
           }
         }
@@ -302,7 +385,29 @@ export default {
       this.download('system/history/export', {
         ...this.queryParams
       }, `history_${new Date().getTime()}.xlsx`)
+    },
+    // 列表点击图片时触发，查看图片
+    setSrcList(data) {
+      this.srcList = []
+      data.forEach(item => this.srcList.push(item.url))
+    },
+    // 打开选择文件弹窗
+    openFile(){
+      this.materialOpen = true;
+    },
+    updateDialogOpen(newValue){
+      this.materialOpen = newValue
+    },
+    updateImg(newValue){
+      this.form.img = newValue
+      this.setSrcList(this.form.img)
+    },
+    handleOpen(url){
+      this.dialogVisible = true
+      this.dialogUrl = url
     }
+
   }
 };
 </script>
+

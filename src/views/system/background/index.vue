@@ -2,14 +2,27 @@
   <div class="app-container">
     <el-table v-loading="loading" :data="backgroundList" @selection-change="handleSelectionChange">
       <el-table-column label="标签" align="center" prop="label" />
-      <el-table-column label="背景图" align="center" prop="img" >
+      <el-table-column label="背景图片" align="center" prop="img">
         <template slot-scope="scope">
           <el-image
+            v-if="scope.row.img.length == 0"
             style="width: 100px; height: 100px"
-            :src="scope.row.img"
-            :preview-src-list="imageList"
-            @click="setImageList(scope.row.img)"
-            fit="contain"></el-image>
+            fit="scale-down"
+            src=""
+          />
+          <a v-else-if="scope.row.img[0].url.indexOf('.mp4') != -1"
+             @click="handleOpen(scope.row.img[0].url)">
+            <video class="video" :src="scope.row.img[0].url"
+                   width="100" height="100" />
+          </a>
+          <el-image
+            v-else
+            style="width: 100px; height: 100px"
+            fit="scale-down"
+            :src="scope.row.img[0].url"
+            :preview-src-list="srcList"
+            @click="setSrcList(scope.row.img)"
+          />
         </template>
       </el-table-column>
       <el-table-column label="描述" align="center" prop="remark" />
@@ -27,21 +40,37 @@
     </el-table>
 
     <!-- 添加或修改背景图对话框 -->
-    <el-dialog :title="title" :visible.sync="open" width="500px" append-to-body>
+    <el-dialog :title="title" :visible.sync="BackOpen" width="500px" append-to-body>
       <el-form ref="form" :model="form" :rules="rules" label-width="80px">
-        <el-form-item label="标签" align="center" prop="label">
-          <el-input disabled v-model="form.label"></el-input>
+        <el-form-item label="标签" align="left" prop="label">
+          <template slot-scope="scope">
+            {{form.label}}
+          </template>
         </el-form-item>
-        <el-form-item label="背景图" prop="img" >
-          <el-upload
-            :http-request="HttpRequest"
-            :on-preview="handlePreview"
-            :on-remove="handleRemove"
-            :file-list="imageList"
-            list-type="picture">
-            <el-button size="small" type="primary">点击上传</el-button>
-            <span style="margin-left: 20px;" slot="tip" class="el-upload__tip">只能上传jpg/png文件，且不超过500kb</span>
-          </el-upload>
+        <el-form-item label="背景图片" prop="img">
+          <p class="margin0" style="padding-bottom: 10px;">
+            <el-button @click="openFile()">选择文件</el-button>
+          </p>
+          <span v-for="item in form.img">
+            <el-image
+              v-if="item.url == undefined"
+              style="width: 100px; height: 100px"
+              fit="scale-down"
+              src=""
+            />
+            <a v-else-if="item.url.indexOf('.mp4') != -1"
+               @click="handleOpen(item.url)">
+              <video class="video" :src="item.url"
+                     width="100" height="100" />
+            </a>
+            <el-image
+              v-else
+              style="width: 100px; height: 100px"
+              fit="scale-down"
+              :src="item.url"
+              :preview-src-list="srcList"
+            />
+          </span>
         </el-form-item>
         <el-table-column label="描述" align="center" prop="remark" />
       </el-form>
@@ -50,14 +79,35 @@
         <el-button @click="cancel">取 消</el-button>
       </div>
     </el-dialog>
+
+    <!--  文件选择弹窗-->
+    <material-dialog
+      :dialogOpen="materialOpen" @updateDialogOpen="updateDialogOpen"
+      :img="form.img" @updateImg="updateImg"
+      :number="number"
+    />
+    <!-- 视频播放弹窗-->
+    <el-dialog
+      title="视频播放"
+      :visible.sync="dialogVisible"
+      width="50%">
+      <video class="video" :src="dialogUrl" width="100%"
+             controls />
+
+      <span slot="footer" class="dialog-footer">
+        <el-button type="primary" @click="dialogVisible = false">关 闭</el-button>
+      </span>
+    </el-dialog>
   </div>
 </template>
 
 <script>
 import { listBackground, getBackground, delBackground, addBackground, updateBackground } from "@/api/system/background";
+import MaterialDialog from '../../MaterialDialog'
 
 export default {
   name: "Background",
+  components: { MaterialDialog },
   data() {
     return {
       // 遮罩层
@@ -77,13 +127,19 @@ export default {
       // 弹出层标题
       title: "",
       // 是否显示弹出层
-      open: false,
+      BackOpen: false,
       // 表单参数
       form: {},
       // 表单校验
       rules: {
       },
-      imageList:[]
+      srcList:['#'],
+      // 选择文件弹窗开关
+      materialOpen: false,
+      // 选择文件个数
+      number:1,
+      dialogVisible:false,
+      dialogUrl:null,
     };
   },
   created() {
@@ -95,13 +151,17 @@ export default {
       this.loading = true;
       listBackground().then(response => {
         this.backgroundList = response.data;
+        this.backgroundList.forEach(item => {
+          item.img = JSON.parse(item.img)
+        })
         this.loading = false;
       });
     },
     // 取消按钮
     cancel() {
-      this.open = false;
+      this.BackOpen = false;
       this.reset();
+      this.getList()
     },
     // 表单重置
     reset() {
@@ -129,41 +189,51 @@ export default {
       const id = row.id || this.ids
       getBackground(id).then(response => {
         this.form = response.data;
-        this.open = true;
+        this.BackOpen = true;
         this.title = "修改背景图";
-        this.imageList=[{name:this.form.img.substring(this.form.img.lastIndexOf("/") + 1),url:this.form.img}]
+        this.form.img = JSON.parse(this.form.img)
+        this.setSrcList(this.form.img)
       });
     },
     /** 提交按钮 */
     submitForm() {
       this.$refs["form"].validate(valid => {
         if (valid) {
+          this.form.img = JSON.stringify(this.form.img)
           if (this.form.id != null) {
             updateBackground(this.form).then(response => {
               this.$modal.msgSuccess("修改成功");
-              this.open = false;
-              this.getList();
+              this.cancel()
             });
           } else {
             addBackground(this.form).then(response => {
               this.$modal.msgSuccess("新增成功");
-              this.open = false;
-              this.getList();
+              this.cancel()
             });
           }
         }
       });
     },
-    setImageList(img){
-      this.imageList = [img]
+// 列表点击图片时触发，查看图片
+    setSrcList(data) {
+      this.srcList = []
+      data.forEach(item => this.srcList.push(item.url))
     },
-    HttpRequest(){},
-    handleRemove(file, fileList) {
-      console.log(file, fileList);
+    // 打开选择文件弹窗
+    openFile(){
+      this.materialOpen = true;
     },
-    handlePreview(file) {
-      this.imageList = [file.url]
+    updateDialogOpen(newValue){
+      this.materialOpen = newValue
     },
+    updateImg(newValue){
+      this.form.img = newValue
+      this.setSrcList(this.form.img)
+    },
+    handleOpen(url){
+      this.dialogVisible = true
+      this.dialogUrl = url
+    }
   }
 };
 </script>

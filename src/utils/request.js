@@ -43,11 +43,11 @@ service.interceptors.request.use(config => {
       time: new Date().getTime()
     }
     const requestSize = Object.keys(JSON.stringify(requestObj)).length; // 请求数据大小
-    const limitSize = 5 * 1024 * 1024; // 限制存放数据5M
-    if (requestSize >= limitSize) {
-      console.warn(`[${config.url}]: ` + '请求数据大小超出允许的5M限制，无法进行防重复提交验证。')
-      return config;
-    }
+    // const limitSize = 5 * 1024 * 1024; // 限制存放数据5M
+    // if (requestSize >= limitSize) {
+    //   console.warn(`[${config.url}]: ` + '请求数据大小超出允许的5M限制，无法进行防重复提交验证。')
+    //   return config;
+    // }
     const sessionObj = cache.session.getJSON('sessionObj')
     if (sessionObj === undefined || sessionObj === null || sessionObj === '') {
       cache.session.setJSON('sessionObj', requestObj)
@@ -56,7 +56,9 @@ service.interceptors.request.use(config => {
       const s_data = sessionObj.data;                // 请求数据
       const s_time = sessionObj.time;                // 请求时间
       const interval = 1000;                         // 间隔时间(ms)，小于此时间视为重复提交
-      if (s_data === requestObj.data && requestObj.time - s_time < interval && s_url === requestObj.url) {
+      if (requestObj.url.indexOf("/common/upload") !== -1){
+        console.log("批量上传~~")
+      }else if (s_data === requestObj.data && requestObj.time - s_time < interval && s_url === requestObj.url) {
         const message = '数据正在处理，请勿重复提交';
         console.warn(`[${s_url}]: ` + message)
         return Promise.reject(new Error(message))

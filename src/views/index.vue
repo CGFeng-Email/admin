@@ -180,6 +180,7 @@ export default {
   data() {
     return {
       evaluate_list: 30,
+      load: false,
     };
   },
   async mounted() {
@@ -1570,7 +1571,7 @@ export default {
     .c_box {
       background: #fff;
       .item {
-        
+
       }
       #center_echarts {
         height: 280px;

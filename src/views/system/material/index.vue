@@ -14,7 +14,7 @@
                     <div class="li_text" @click="menu_edit_name(item)">
                       命名分组
                     </div>
-                    <el-popconfirm title="确定删除该文件吗？" @confirm="listDel(item.id)">
+                    <el-popconfirm title="确定删除该文件夹吗？" @confirm="listDel(item.id)">
                       <div class="li_text" slot="reference">删除文件</div>
                     </el-popconfirm>
                   </div>
@@ -32,13 +32,19 @@
             <div class="content_head">
               <div class="ch_left">
                 <el-upload action="#" accept=".jpg,.jpeg,.png,.gif.JPG,.JPEG,.PBG,.GIF,.mp4,.MP4"
-                           :on-change="upload_change">
+                           :show-file-list="false"
+                           :on-change="upload_change" :multiple="true" :auto-upload="false">
                   <el-button size="small" type="primary">本地上传</el-button>
                 </el-upload>
               </div>
               <div class="ch_right">
-                <el-input placeholder="请输入搜索内容" v-model="keyword" class="input-with-select">
-                  <el-button slot="append" icon="el-icon-search"></el-button>
+                <el-input
+                  v-model="keyword"
+                  placeholder="请输入搜索内容"
+                  clearable
+                  @keyup.enter.native="handleQuery"
+                >
+                  <el-button slot="append" icon="el-icon-search" @click="handleQuery"></el-button>
                 </el-input>
                 <div class="icon_box" :class="type_index == 0 ? 'active' : ''">
                   <i class="icon el-icon-s-order"></i>
@@ -48,36 +54,44 @@
                 </div>
               </div>
             </div>
-            <el-table class="table_content" :data="fileList" border height="500" v-loading="loading">
-              <el-table-column type="selection" width="55"></el-table-column>
-              <el-table-column prop="url" label="图片">
+            <el-table class="table_content"
+                      :data="fileList"
+                      border height="500" v-loading="loading">
+              <el-table-column type="selection" width="55" align="center" />
+              <el-table-column prop="url" align="center" label="文件">
                 <template slot-scope="scope">
                   <div class="cover">
-                    <video class="video" :src="scope.row.url" autoplay muted loop
-                           v-if="scope.row.url.indexOf('.mp4') != -1"></video>
+                    <a v-if="scope.row.url.indexOf('.mp4') != -1"
+                       @click="handleOpen(scope.row.url)">
+                      <video class="video" :src="scope.row.url"
+                             width="100" height="100" />
+                    </a>
                     <el-image class="img" :preview-src-list="[scope.row.url]" :src="scope.row.url" fit="cover"
                               v-else></el-image>
+<!--                    <Display :displayType="0" :displayData="scope.row.url" />-->
                   </div>
                 </template>
               </el-table-column>
-              <el-table-column prop="name" label="名称"></el-table-column>
-              <el-table-column prop="createTime" label="上传日期"></el-table-column>
-              <el-table-column label="操作">
+              <el-table-column prop="name" align="center" label="名称"></el-table-column>
+              <el-table-column prop="createTime" align="center" label="上传日期"></el-table-column>
+              <el-table-column label="操作" align="center">
                 <template slot-scope="scope">
                   <el-button class="btn" slot="reference" type="primary" size="mini"
                              @click="editName(scope.row)">重命名</el-button>
-                  <el-popconfirm title="这是一段内容确定删除吗？" @confirm="listDel(scope.row.id)">
+                  <el-popconfirm title="确定删除该文件吗？" @confirm="listDel(scope.row.id)">
                     <el-button type="danger" size="mini" slot="reference">删除</el-button>
                   </el-popconfirm>
                 </template>
               </el-table-column>
             </el-table>
-            <div class="page_content">
-              <el-pagination @size-change="handleSizeChange" @current-change="handleCurrentChange"
-                             :current-page="currentPage" :page-sizes="[100, 200, 300, 400]" :page-size="100"
-                             layout="total, sizes, prev, pager, next, jumper" :total="currentTotal">
-              </el-pagination>
-            </div>
+            <pagination
+              class="page_content"
+              v-show="total>0"
+              :total="total"
+              :page.sync="queryParams.pageNum"
+              :limit.sync="queryParams.pageSize"
+              @pagination="getList"
+            />
           </div>
         </el-col>
       </el-row>
@@ -98,11 +112,11 @@
       </span>
     </el-dialog>
 
-    <!-- 预览上传模块弹窗 -->
-    <el-dialog :visible.sync="upload_prev_dialogs" :destroy-on-close="true" :before-close="prev_dialogs_close">
-      <img width="100%" :src="upload_image_url" alt="" v-if="upload_prev_type == 'img'" />
-      <video class="video" :src="upload_video_url" autoplay loop v-else-if="upload_prev_type == 'video'"></video>
-    </el-dialog>
+<!--    &lt;!&ndash; 预览上传模块弹窗 &ndash;&gt;-->
+<!--    <el-dialog :visible.sync="upload_prev_dialogs" :destroy-on-close="true" :before-close="prev_dialogs_close">-->
+<!--      <img width="100%" :src="upload_image_url" alt="" v-if="upload_prev_type == 'img'" />-->
+<!--      <video class="video" :src="upload_video_url" autoplay loop v-else-if="upload_prev_type == 'video'"></video>-->
+<!--    </el-dialog>-->
 
     <!-- 修改命名-弹窗 -->
     <el-dialog :visible.sync="edit_name_dialog_show" :destroy-on-close="true" :before-close="edit_name_dialog_close"
@@ -120,6 +134,20 @@
         <el-button type="primary" @click="edit_name_dialog_confirm">确 定</el-button>
       </div>
     </el-dialog>
+
+    <!-- 视频播放弹窗-->
+    <el-dialog
+      title="视频播放"
+      :visible.sync="dialogVisible"
+      width="50%">
+      <video class="video" :src="dialogUrl" width="100%"
+             controls />
+
+      <span slot="footer" class="dialog-footer">
+        <el-button type="primary" @click="dialogVisible = false">关 闭</el-button>
+      </span>
+    </el-dialog>
+
   </div>
 </template>
 
@@ -133,7 +161,9 @@ import {
   addList,
   listDel
 }  from '../../../api/system/material'
+import Display from '../../Display'
 export default {
+  components: { Display },
   data() {
     return {
       tabsNameActive: "tabs0",
@@ -166,9 +196,18 @@ export default {
       },
       loading: false, // 加载
       fileList: [], // 上传文件列表
-      currentPage: 1, // 当前页
-      currentTotal: 0, //总页数
       disabled: false,
+      // 总条数
+      total: 0,
+      // 查询参数
+      queryParams: {
+        pageNum: 1,
+        pageSize: 10,
+        id: null,
+        name: null,
+      },
+      dialogVisible:false,
+      dialogUrl:null,
     };
   },
   created() {
@@ -184,11 +223,7 @@ export default {
       console.log("菜单列表", res);
       if (res.code == 200) {
         this.menu_list = res.data;
-        if (res.data.length > 0 && flag == false) {
-          this.getList(res.data[0].id);
-        } else {
-          this.getList(this.menu_list[this.menu_index].id)
-        }
+        this.getList()
       } else {
         this.$message.error(res.msg);
       }
@@ -196,14 +231,19 @@ export default {
     // 左侧菜单栏，change
     menu_change(item, index) {
       this.menu_index = index;
-      this.getList(item.id);
+      this.getList();
     },
     // 列表
-    async getList(id) {
+    async getList() {
       this.loading = true;
-      const res = await List(id);
+      if (this.menu_index>=this.menu_list.length){
+        this.menu_index = 0
+      }
+      this.queryParams.id = this.menu_list[this.menu_index].id
+      const res = await List(this.queryParams);
       console.log("列表", res);
-      this.fileList = res.data;
+      this.fileList = res.rows;
+      this.total = res.total;
       this.loading = false;
     },
     // 左侧菜单栏，触底
@@ -236,6 +276,7 @@ export default {
               message: "修改名称成功",
               type: "success",
             });
+
           } else {
             this.$message.error(res.msg);
           }
@@ -269,14 +310,13 @@ export default {
             type: "0",
             name: this.form.name,
           });
-          console.log("res", res);
           if (res.code == 200) {
             // 重新加载
             await this.getMenuListFn(true);
             // 初始化
             await this.edit_name_dialog_close();
             this.$message({
-              message: "添加新模块成功",
+              message: "添加文件夹成功",
               type: "success",
             });
           } else {
@@ -286,25 +326,23 @@ export default {
       });
     },
     // 本地上传
-    async upload_change(file) {
+    upload_change(file) {
       if (file.status !== "ready") return;
       console.log("本地上传", file);
 
       let formData = new FormData();
       formData.append("file", file.raw);
 
-      const res = await upload(formData);
-
-      const id = this.menu_list[this.menu_index].id;
-
-      const res2 = await addList({
-        parentId: id,
-        type: 1,
-        name: res.originalFilename,
-        url: res.url,
+      upload(formData).then(res=>{
+        const data = {
+          parentId: this.menu_list[this.menu_index].id,
+          type: 1,
+          name: res.originalFilename,
+          url: res.fileName,
+        }
+        addList(data);
+        this.getList();
       });
-
-      this.getList(id);
     },
     // 列表重命名
     async editName(e) {
@@ -316,7 +354,7 @@ export default {
     async listDel(id) {
       const res = await listDel(id);
       if (res.code == 200) {
-        this.getMenuListFn(true)
+        this.getMenuListFn(false)
         this.$message({
           message: "删除成功",
           type: "success",
@@ -325,14 +363,14 @@ export default {
         this.$message.error(res.msg);
       }
     },
-    // 每页
-    handleSizeChange(val) {
-      console.log(`每页 ${val} 条`);
+    handleOpen(url){
+      this.dialogVisible = true
+      this.dialogUrl = url
     },
-    // 当前页
-    handleCurrentChange(val) {
-      console.log(`当前页: ${val}`);
-    },
+    handleQuery(){
+      this.queryParams.name = this.keyword
+      this.getList()
+    }
   },
 };
 </script>
@@ -343,7 +381,7 @@ export default {
   background: #f5f5f5;
 
   .main {
-    height: calc(100vh - 84px);
+    height: calc(100vh - 140px);
     border: 1px solid #e4e7ed;
     border-radius: 4px;
     background: #fff;
@@ -416,7 +454,7 @@ export default {
       }
 
       .menu_add_box {
-        height: 100px;
+        height: 60px;
         text-align: center;
 
         .btn {
@@ -465,7 +503,7 @@ export default {
       }
 
       .table_content {
-        margin-top: 20px;
+        margin-top: 10px;
 
         .cover {
           text-align: center;
@@ -487,8 +525,11 @@ export default {
       }
 
       .page_content {
-        height: 100px;
-        padding: 10px 0;
+        height: 60px;
+        margin: 0px;
+        display:flex;
+        align-items:center;
+        justify-content:left;
       }
     }
   }

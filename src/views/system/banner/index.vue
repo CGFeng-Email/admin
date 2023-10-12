@@ -87,23 +87,38 @@
       <right-toolbar :showSearch.sync="showSearch" @queryTable="getList"></right-toolbar>
     </el-row>
 
-    <el-table v-loading="loading" :data="bannerList" @selection-change="handleSelectionChange">
+    <el-table v-loading="loading" :data="bannerList"
+              :default-sort = "{prop: 'id', order: 'ascending'}"
+              @selection-change="handleSelectionChange">
       <el-table-column type="selection" width="55" align="center"/>
-      <el-table-column label="序号" align="center" prop="id"/>
-      <el-table-column label="名称" align="center" prop="name"/>
-      <el-table-column label="图片" align="center" prop="img">
+      <el-table-column label="轮播图" align="center" prop="img">
         <template slot-scope="scope">
           <el-image
+            v-if="scope.row.img.length == 0"
+            style="width: 100px; height: 100px"
+          >
+            <div slot="error" class="image-slot" style="background: #F5F7FA;line-height: 100px;">
+              暂无图片
+            </div>
+          </el-image>
+          <a v-else-if="scope.row.img[0].url.indexOf('.mp4') != -1"
+             @click="handleOpen(scope.row.img[0].url)">
+            <video class="video" :src="scope.row.img[0].url"
+                   width="100" height="100" />
+          </a>
+          <el-image
+            v-else
             style="width: 100px; height: 100px"
             fit="scale-down"
-            :src="scope.row.img"
+            :src="scope.row.img[0].url"
             :preview-src-list="srcList"
             @click="setSrcList(scope.row.img)"
-          >
-          </el-image>
+          />
         </template>
       </el-table-column>
-      <el-table-column label="排序" align="center" prop="sort"/>
+      <el-table-column label="名称" align="center" prop="name"/>
+      <el-table-column label="描述" align="left" prop="remark" />
+      <el-table-column label="排序" align="center" prop="sort" sortable />
       <el-table-column label="状态" align="center" prop="status">
         <template slot-scope="scope">
           <el-switch
@@ -114,7 +129,6 @@
           ></el-switch>
         </template>
       </el-table-column>
-      <el-table-column label="描述" align="center" prop="remark"/>
       <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
         <template slot-scope="scope">
           <el-button
@@ -146,33 +160,54 @@
     />
 
     <!-- 添加或修改轮播图对话框 -->
-    <el-dialog :title="title" :visible.sync="open" width="500px" append-to-body>
+    <el-dialog :title="title" :visible.sync="BannerOpen"
+               @close="cancel"
+               width="500px" append-to-body>
       <el-form ref="form" :model="form" :rules="rules" label-width="80px">
         <el-form-item label="名称" prop="name">
           <el-input v-model="form.name" placeholder="请输入名称"/>
         </el-form-item>
+        <el-row>
+          <el-col :span="14">
+            <el-form-item label="排序" prop="sort">
+              <el-input-number v-model="form.sort" :min="1" :max="10"
+                                type="width:80px;" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="10">
+            <el-form-item label="状态" prop="status">
+              <el-switch
+                v-model="form.status"
+                active-value="1"
+                inactive-value="0"
+              ></el-switch>
+            </el-form-item>
+          </el-col>
+        </el-row>
         <el-form-item label="图片" prop="img">
-          <p class="margin0">
+          <p class="margin0" style="padding-bottom: 10px;">
             <el-button @click="openFile()">选择文件</el-button>
           </p>
-          <p>
+          <span v-for="item in form.img">
             <el-image
+              v-if="item.url == undefined"
               style="width: 100px; height: 100px"
               fit="scale-down"
-              :src="form.img"
+              src=""
+            />
+            <a v-else-if="item.url.indexOf('.mp4') != -1"
+               @click="handleOpen(item.url)">
+              <video class="video" :src="item.url"
+                     width="100" height="100" />
+            </a>
+            <el-image
+              v-else
+              style="width: 100px; height: 100px"
+              fit="scale-down"
+              :src="item.url"
               :preview-src-list="srcList"
             />
-          </p>
-        </el-form-item>
-        <el-form-item label="排序" prop="sort">
-          <el-input-number v-model="form.sort" :min="1" :max="10" type="width:80px;"></el-input-number>
-        </el-form-item>
-        <el-form-item label="状态" prop="status">
-          <el-switch
-            v-model="form.status"
-            active-value="1"
-            inactive-value="0"
-          ></el-switch>
+          </span>
         </el-form-item>
         <el-form-item label="描述" prop="remark">
           <el-input v-model="form.remark" type="textarea" placeholder="请输入内容"/>
@@ -183,14 +218,24 @@
         <el-button @click="cancel">取 消</el-button>
       </div>
     </el-dialog>
-
-      <materal-dialog
-        :open="materialOpen" @updateOpen="updateOpen"
-        :img="[form.img]" @updateImg="updateImg"
+    <!--  文件选择弹窗-->
+    <materal-dialog
+        :dialogOpen="materialOpen" @updateDialogOpen="updateDialogOpen"
+        :img="form.img" @updateImg="updateImg"
         :number="number"
       />
+    <!-- 视频播放弹窗-->
+    <el-dialog
+      title="视频播放"
+      :visible.sync="dialogVisible"
+      width="50%">
+        <video class="video" :src="dialogUrl" width="100%"
+               controls />
 
-
+      <span slot="footer" class="dialog-footer">
+        <el-button type="primary" @click="dialogVisible = false">关 闭</el-button>
+      </span>
+    </el-dialog>
   </div>
 </template>
 
@@ -220,7 +265,7 @@ export default {
       // 弹出层标题
       title: '',
       // 是否显示弹出层
-      open: false,
+      BannerOpen: false,
       // 查询参数
       queryParams: {
         pageNum: 1,
@@ -233,14 +278,17 @@ export default {
       form: {},
       // 表单校验
       rules: {},
-      srcList: [],
+      srcList: ['#'],
       dicts: [
         { label: '显示', value: '1' },
         { label: '停用', value: '0' }
       ],
       // 选择文件弹窗开关
       materialOpen: false,
+      // 选择文件个数
       number:1,
+      dialogVisible:false,
+      dialogUrl:null,
     }
   },
   created() {
@@ -250,16 +298,21 @@ export default {
     /** 查询轮播图列表 */
     getList() {
       this.loading = true
-      listBanner(this.queryParams).then(response => {
-        this.bannerList = response.rows
-        this.total = response.total
+      listBanner(this.queryParams).then(res => {
+        this.bannerList = res.rows
+        this.bannerList.forEach(item => {
+          item.img = JSON.parse(item.img)
+        })
+        this.total = res.total
         this.loading = false
+        console.log(this.bannerList)
       })
     },
     // 取消按钮
     cancel() {
-      this.open = false
+      this.BannerOpen = false
       this.reset()
+      this.getList()
     },
     // 表单重置
     reset() {
@@ -267,8 +320,8 @@ export default {
         id: null,
         name: null,
         img: null,
-        sort: null,
-        status: null,
+        sort: 1,
+        status: '1',
         createBy: null,
         createTime: null,
         updateBy: null,
@@ -296,7 +349,7 @@ export default {
     /** 新增按钮操作 */
     handleAdd() {
       this.reset()
-      this.open = true
+      this.BannerOpen = true
       this.title = '添加轮播图'
 
     },
@@ -306,26 +359,26 @@ export default {
       const id = row.id || this.ids
       getBanner(id).then(response => {
         this.form = response.data
-        this.open = true
+        this.BannerOpen = true
         this.title = '修改轮播图'
-        this.srcList = [this.form.img]
+        this.form.img = JSON.parse(this.form.img)
+        this.setSrcList(this.form.img)
       })
     },
     /** 提交按钮 */
     submitForm() {
       this.$refs['form'].validate(valid => {
         if (valid) {
+          this.form.img = JSON.stringify(this.form.img)
           if (this.form.id != null) {
             updateBanner(this.form).then(response => {
               this.$modal.msgSuccess('修改成功')
-              this.open = false
-              this.getList()
+              this.cancel()
             })
           } else {
             addBanner(this.form).then(response => {
               this.$modal.msgSuccess('新增成功')
-              this.open = false
-              this.getList()
+              this.cancel()
             })
           }
         }
@@ -350,7 +403,7 @@ export default {
     },
     // 状态修改
     updateStatus(row) {
-      let text = row.status === '0' ? '启用' : '停用'
+      let text = row.status === '1' ? '启用' : '停用'
       this.$modal.confirm('确认要' + text + '' + row.name + '轮播图吗？').then(function() {
         return changeStatus(row.id, row.status)
       }).then(() => {
@@ -360,19 +413,25 @@ export default {
       })
     },
     // 列表点击图片时触发，查看图片
-    setSrcList(img) {
-      this.srcList = [img]
+    setSrcList(data) {
+      this.srcList = []
+      data.forEach(item => this.srcList.push(item.url))
     },
     // 打开选择文件弹窗
     openFile(){
       this.materialOpen = true;
     },
-    updateOpen(newValue){
+    updateDialogOpen(newValue){
       this.materialOpen = newValue
     },
     updateImg(newValue){
       this.form.img = newValue
+      this.setSrcList(this.form.img)
     },
+    handleOpen(url){
+      this.dialogVisible = true
+      this.dialogUrl = url
+    }
   }
 }
 </script>
@@ -531,5 +590,9 @@ export default {
     }
   }
 }
-
+.intro-text{
+  width: 100px; /* 设置宽度 */
+  white-space: nowrap; /* 防止文字换行 */
+  overflow: hidden; /* 超出部分隐藏 */
+}
 </style>

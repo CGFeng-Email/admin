@@ -31,6 +31,9 @@ export function updateNews(data) {
   return request({
     url: '/system/news',
     method: 'put',
+    headers: {
+      'Content-Type': 'application/json',
+    },
     data: data
   })
 }

@@ -12,19 +12,19 @@ export const addMenu = (data) => {
 };
 
 // 获取列表
-export const MenuList = (data) => {
+export const MenuList = () => {
   return request({
     url: "/system/material/list",
     method: "get",
-    data,
   });
 };
 
 // 右侧列表
-export const List = (id) => {
+export const List = (data) => {
   return request({
-    url: "/system/material/" + id,
+    url: "/system/material/index",
     method: "get",
+    params:data,
   });
 };
 

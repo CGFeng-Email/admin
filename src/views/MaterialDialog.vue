@@ -19,8 +19,8 @@
                       <div class="li_text" @click="menu_edit_name(item)">
                         命名分组
                       </div>
-                      <el-popconfirm title="确定删除该文件吗？" @confirm="listDel(item.id)">
-                        <div class="li_text" slot="reference">删除文件</div>
+                      <el-popconfirm title="确定删除该文件夹吗？" @confirm="listDel(item.id)">
+                        <div class="li_text" slot="reference">删除文件夹</div>
                       </el-popconfirm>
                     </div>
                     <span class="icon" slot="reference" v-if="item.name != '全部' && item.name != '未分组'">...</span>
@@ -61,6 +61,8 @@
               </div>
               <el-table class="table_content"
                         :data="fileList"
+                        ref="table"
+                        @row-click="RowClick"
                         border height="500" v-loading="loading">
                 <el-table-column type="selection" width="55" align="center" />
                 <el-table-column prop="url" align="center" label="文件">
@@ -268,6 +270,17 @@ export default {
       dialogVisible:false,
       dialogUrl:null,
     };
+  },
+  watch:{
+    dialogOpen: {
+      handler(val) {
+        this.keyword = null
+        if (val == true){
+          this.getMenuListFn()
+        }
+      },
+      immediate: true,
+    },
   },
   created() {
     this.getMenuListFn();

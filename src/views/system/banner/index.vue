@@ -170,7 +170,7 @@
         <el-row>
           <el-col :span="14">
             <el-form-item label="排序" prop="sort">
-              <el-input-number v-model="form.sort" :min="1" :max="10"
+              <el-input-number v-model="form.sort" :min="1" :max="256"
                                 type="width:80px;" />
             </el-form-item>
           </el-col>
@@ -387,7 +387,7 @@ export default {
     /** 删除按钮操作 */
     handleDelete(row) {
       const ids = row.id || this.ids
-      this.$modal.confirm('是否确认删除轮播图编号为"' + ids + '"的数据项？').then(function() {
+      this.$modal.confirm('是否确认删除选中的数据项？').then(function() {
         return delBanner(ids)
       }).then(() => {
         this.getList()

@@ -77,7 +77,7 @@
 
     <el-table v-loading="loading" :data="historyList" @selection-change="handleSelectionChange">
       <el-table-column type="selection" width="55" align="center" />
-      <el-table-column label="图片" align="center" prop="img">
+      <el-table-column label="图片" width="150" align="center" prop="img">
         <template slot-scope="scope">
           <el-image
             v-if="scope.row.img.length == 0"
@@ -102,7 +102,7 @@
           />
         </template>
       </el-table-column>
-      <el-table-column label="年份" align="center" prop="year" />
+      <el-table-column label="年份" width="100" align="center" prop="year" />
       <el-table-column label="名称" align="center" prop="name" />
       <el-table-column label="介绍" align="left" prop="intro" >
         <template slot-scope="scope">
@@ -373,7 +373,7 @@ export default {
     /** 删除按钮操作 */
     handleDelete(row) {
       const ids = row.id || this.ids;
-      this.$modal.confirm('是否确认删除发展历程编号为"' + ids + '"的数据项？').then(function() {
+      this.$modal.confirm('是否确认删除选中的数据项？').then(function() {
         return delHistory(ids);
       }).then(() => {
         this.getList();
@@ -411,3 +411,8 @@ export default {
 };
 </script>
 
+<style lang="scss" scoped>
+.margin0 {
+  margin: 0;
+}
+</style>

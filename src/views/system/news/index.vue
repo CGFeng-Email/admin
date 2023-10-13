@@ -409,7 +409,7 @@ export default {
     /** 删除按钮操作 */
     handleDelete(row) {
       const ids = row.id || this.ids;
-      this.$modal.confirm('是否确认删除新闻编号为"' + ids + '"的数据项？').then(function() {
+      this.$modal.confirm('是否确认删除选中的数据项？').then(function() {
         return delNews(ids);
       }).then(() => {
         this.getList();
@@ -445,3 +445,9 @@ export default {
   }
 };
 </script>
+
+<style lang="scss" scoped>
+.margin0 {
+  margin: 0;
+}
+</style>

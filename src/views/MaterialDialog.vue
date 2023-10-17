@@ -486,11 +486,11 @@ export default {
       }
     },
     cloneDialog(flag=false) {
-      this.$emit('updateDialogOpen', false);
-      this.MaterialQueryParams.name = null
       if(flag){
         this.$emit('updateImg', this.tableList);
       }
+      this.$emit('updateDialogOpen', false);
+      this.MaterialQueryParams.name = null
     },
     cloneImg(){
       this.tableList = []

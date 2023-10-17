@@ -289,9 +289,6 @@ export default {
       this.loading = true;
       listGrouped(this.queryParams).then(response => {
         this.groupedList = response.rows;
-        this.groupedList.forEach(item => {
-          item.img = JSON.parse(item.img)
-        })
         this.total = response.total;
         this.loading = false;
       });
@@ -351,7 +348,6 @@ export default {
         this.form = response.data;
         this.HonorOpen = true;
         this.title = "修改企业荣誉";
-        this.form.img = JSON.parse(this.form.img)
         this.setSrcList(this.form.img)
       });
     },

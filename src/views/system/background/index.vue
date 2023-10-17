@@ -151,9 +151,7 @@ export default {
       this.loading = true;
       listBackground().then(response => {
         this.backgroundList = response.data;
-        this.backgroundList.forEach(item => {
-          item.img = JSON.parse(item.img)
-        })
+        console.log(response.data)
         this.loading = false;
       });
     },
@@ -191,7 +189,6 @@ export default {
         this.form = response.data;
         this.BackOpen = true;
         this.title = "修改背景图";
-        this.form.img = JSON.parse(this.form.img)
         this.setSrcList(this.form.img)
       });
     },

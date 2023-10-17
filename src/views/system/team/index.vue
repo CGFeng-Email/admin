@@ -290,9 +290,6 @@ export default {
       this.loading = true;
       listGrouped(this.queryParams).then(response => {
         this.groupedList = response.rows;
-        this.groupedList.forEach(item => {
-          item.img = JSON.parse(item.img)
-        })
         this.total = response.total;
         this.loading = false;
       });
@@ -351,7 +348,6 @@ export default {
         this.form = response.data;
         this.TeamOpen = true;
         this.title = "修改顾问团队";
-        this.form.img = JSON.parse(this.form.img)
         this.setSrcList(this.form.img)
       });
     },

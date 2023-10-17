@@ -334,11 +334,12 @@ export default {
       formData.append("file", file.raw);
 
       upload(formData).then(res=>{
+        console.log(res)
         const data = {
           parentId: this.menu_list[this.menu_index].id,
           type: 1,
           name: res.originalFilename,
-          url: res.fileName,
+          url: res.url,
         }
         addList(data);
         this.getList();

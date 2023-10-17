@@ -246,9 +246,6 @@ export default {
       this.loading = true;
       listClient(this.queryParams).then(response => {
         this.clientList = response.rows;
-        this.clientList.forEach(item => {
-          item.img = JSON.parse(item.img)
-        })
         this.total = response.total;
         this.loading = false;
       });
@@ -304,7 +301,6 @@ export default {
         this.form = response.data;
         this.ClientOpen = true;
         this.title = "修改合作客户";
-        this.form.img = JSON.parse(this.form.img)
         this.setSrcList(this.form.img)
       });
     },

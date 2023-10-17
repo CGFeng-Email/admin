@@ -300,12 +300,8 @@ export default {
       this.loading = true
       listBanner(this.queryParams).then(res => {
         this.bannerList = res.rows
-        this.bannerList.forEach(item => {
-          item.img = JSON.parse(item.img)
-        })
         this.total = res.total
         this.loading = false
-        console.log(this.bannerList)
       })
     },
     // 取消按钮
@@ -361,7 +357,6 @@ export default {
         this.form = response.data
         this.BannerOpen = true
         this.title = '修改轮播图'
-        this.form.img = JSON.parse(this.form.img)
         this.setSrcList(this.form.img)
       })
     },

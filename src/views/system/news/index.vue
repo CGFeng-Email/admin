@@ -316,9 +316,6 @@ export default {
       this.loading = true;
       listNews(this.queryParams).then(response => {
         this.newsList = response.rows;
-        this.newsList.forEach(item => {
-          item.img = JSON.parse(item.img)
-        })
         this.total = response.total;
         this.loading = false;
       });
@@ -377,7 +374,6 @@ export default {
         this.form = response.data;
         this.NewsOpen = true;
         this.title = "修改新闻";
-        this.form.img = JSON.parse(this.form.img)
         this.form.text = decodeURIComponent(this.form.text)
         this.setSrcList(this.form.img)
       });

@@ -276,6 +276,7 @@ export default {
         name: null,
         type: null,
         author: null,
+        mark: 'zh_CN'
       },
       // 表单参数
       form: {},
@@ -332,9 +333,9 @@ export default {
         id: null,
         name: null,
         img: null,
-        type: '0',
+        type: '1',
         url: null,
-        author: null,
+        author: '中揚新材',
         text: "",
         createBy: null,
         createTime: null,
@@ -376,12 +377,14 @@ export default {
         this.title = "修改新闻";
         this.form.text = decodeURIComponent(this.form.text)
         this.setSrcList(this.form.img)
+        console.log(this.form)
       });
     },
     /** 提交按钮 */
     submitForm() {
       this.$refs["form"].validate(valid => {
         if (valid) {
+          this.form.mark = 'zh_CN'
           this.form.text = encodeURIComponent(this.form.text)
           if (this.form.img !== null){
             this.form.img = JSON.stringify(this.form.img)

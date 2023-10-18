@@ -237,7 +237,7 @@ export default {
         pageSize: 10,
         year: null,
         name: null,
-        mark: 'zh_CN',
+        mark: 'en_US',
       },
       // 表单参数
       form: {},
@@ -349,7 +349,7 @@ export default {
     submitForm() {
       this.$refs["form"].validate(valid => {
         if (valid) {
-          this.form.mark = 'zh_CN'
+          this.form.mark = 'en_US'
           this.form.intro = encodeURIComponent(this.form.intro)
           if (this.form.img !== null){
             this.form.img = JSON.stringify(this.form.img)

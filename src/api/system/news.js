@@ -12,8 +12,9 @@ export function listNews(query) {
 // 查询新闻详细
 export function getNews(id) {
   return request({
-    url: '/system/news/' + id,
-    method: 'get'
+    url: '/system/news',
+    method: 'get',
+    params: {id:id}
   })
 }
 

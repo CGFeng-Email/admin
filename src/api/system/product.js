@@ -12,8 +12,9 @@ export function listProduct(query) {
 // 查询产品详细
 export function getProduct(id) {
   return request({
-    url: '/system/product/' + id,
-    method: 'get'
+    url: '/system/product/',
+    method: 'get',
+    params: {id:id}
   })
 }
 

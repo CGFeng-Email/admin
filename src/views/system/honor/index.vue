@@ -257,6 +257,7 @@ export default {
         type: '1',
         name: null,
         intro: null,
+        mark: 'zh_CN',
       },
       // 表单参数
       form: {},
@@ -356,6 +357,7 @@ export default {
       this.$refs["form"].validate(valid => {
         if (valid) {
           this.form.img = JSON.stringify(this.form.img)
+          this.form.mark = 'zh_CN'
           if (this.form.id != null) {
             updateGrouped(this.form).then(response => {
               this.$modal.msgSuccess("修改成功");

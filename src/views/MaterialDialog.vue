@@ -317,6 +317,13 @@ export default {
       this.fileList = res.rows;
       this.total = res.total;
       this.loading = false;
+      this.tableList.forEach(x =>{
+        this.fileList.forEach(y =>{
+          if (x.id == y.id){
+            this.$refs.table.toggleRowSelection(y, true)
+          }
+        })
+      })
     },
     // 左侧菜单栏，触底
     menu_to_bottom(e) {
@@ -410,7 +417,7 @@ export default {
           parentId: this.menu_list[this.menu_index].id,
           type: 1,
           name: res.originalFilename,
-          url: res.fileName,
+          url: res.url,
         }
         addList(data);
         this.getList();
@@ -438,9 +445,26 @@ export default {
     // 选择图片方法
     RowClick(row, column, event){
       if (this.number == 0){
-        this.tableList.push({id:row.id,url:row.url})
-        this.$refs.table.toggleRowSelection(row, true)
+        // 不限制文件选择数量
+        const selected = this.tableList.some(item=>item.id == row.id)
+        if (selected){
+          this.tableList.some((item,index) =>{
+            if (item.id == row.id){
+              console.log(item == row)
+              this.tableList.splice(index,1)
+              this.fileList.some(file =>{
+                if (file.id == row.id){
+                  this.$refs.table.toggleRowSelection(file, false)
+                }
+              })
+            }
+          })
+        }else{
+          this.tableList.push({id:row.id,url:row.url})
+          this.$refs.table.toggleRowSelection(row, true)
+        }
       } else if (this.number == 1){
+        // 限制文件选择数量为 1 ，直接点击图片就会替换
         this.cloneImg()
         this.tableList = [{id:row.id,url:row.url}]
         this.$refs.table.toggleRowSelection(row, true)

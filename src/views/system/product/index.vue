@@ -105,7 +105,7 @@
         </template>
       </el-table-column>
       <el-table-column label="名称" align="center" prop="name" />
-      <el-table-column label="介绍" align="center" prop="intro" />
+<!--      <el-table-column label="介绍" align="center" prop="intro" />-->
       <el-table-column label="排序" align="center" prop="sort" sortable />
       <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
         <template slot-scope="scope">
@@ -136,7 +136,7 @@
     />
 
     <!-- 添加或修改产品对话框 -->
-    <el-dialog :title="title" :visible.sync="open" width="500px" append-to-body>
+    <el-dialog :title="title" :visible.sync="open" width="50%" append-to-body>
       <el-form ref="form" :model="form" :rules="rules" label-width="80px">
         <el-form-item label="名称" prop="name">
           <el-input v-model="form.name" placeholder="请输入名称" />
@@ -145,7 +145,8 @@
           <el-input v-model="form.intro" placeholder="请输入介绍" />
         </el-form-item>
         <el-form-item label="特点" prop="trait">
-          <el-input v-model="form.trait" placeholder="请输入特点" />
+          <Editor v-model="form.trait" :type="'custom'"
+                  :height="200" :minHeight="200" />
         </el-form-item>
         <el-form-item label="排序" prop="sort">
           <el-input-number v-model="form.sort" :min="1" :max="256"
@@ -241,6 +242,7 @@ export default {
         name: null,
         img: null,
         intro: null,
+        mark: 'zh_CN',
       },
       // 表单参数
       form: {},
@@ -294,7 +296,8 @@ export default {
         createTime: null,
         updateBy: null,
         updateTime: null,
-        remark: null
+        remark: null,
+        sort: 1,
       };
       this.resetForm("form");
     },
@@ -329,14 +332,18 @@ export default {
         this.open = true;
         this.title = "修改产品";
         this.form.text = decodeURIComponent(this.form.text)
+        this.form.trait = decodeURIComponent(this.form.trait)
         this.setSrcList(this.form.img)
+        console.log(this.form)
       });
     },
     /** 提交按钮 */
     submitForm() {
       this.$refs["form"].validate(valid => {
         if (valid) {
+          this.form.trait = encodeURIComponent(this.form.trait)
           this.form.text = encodeURIComponent(this.form.text)
+          this.form.mark = 'zh_CN'
           if (this.form.img !== null){
             this.form.img = JSON.stringify(this.form.img)
           }else {

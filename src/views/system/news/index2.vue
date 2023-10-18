@@ -1,24 +1,40 @@
 <template>
   <div class="app-container">
     <el-form :model="queryParams" ref="queryForm" size="small" :inline="true" v-show="showSearch" label-width="68px">
-      <el-form-item label="年份" prop="year">
-        <el-select
-          v-model="queryParams.year"
-          placeholder="请选择年份"
-          clearable
-        >
-          <el-option
-            v-for="dict in dicts"
-            :key="dict"
-            :label="dict"
-            :value="dict"
-          />
-        </el-select>
-      </el-form-item>
       <el-form-item label="名称" prop="name">
         <el-input
           v-model="queryParams.name"
           placeholder="请输入名称"
+          clearable
+          @keyup.enter.native="handleQuery"
+        />
+      </el-form-item>
+      <el-form-item label="类型" prop="type">
+        <el-select
+          v-model="queryParams.type"
+          placeholder="请选择类型"
+          clearable
+        >
+          <el-option
+            v-for="dict in dicts"
+            :key="dict.value"
+            :label="dict.label"
+            :value="dict.value"
+          />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="作者" prop="author">
+        <el-input
+          v-model="queryParams.author"
+          placeholder="请输入作者"
+          clearable
+          @keyup.enter.native="handleQuery"
+        />
+      </el-form-item>
+      <el-form-item label="描述信息" prop="remark">
+        <el-input
+          v-model="queryParams.remark"
+          placeholder="请输入描述信息"
           clearable
           @keyup.enter.native="handleQuery"
         />
@@ -37,7 +53,7 @@
           icon="el-icon-plus"
           size="mini"
           @click="handleAdd"
-          v-hasPermi="['system:history:add']"
+          v-hasPermi="['system:news:add']"
         >新增</el-button>
       </el-col>
       <el-col :span="1.5">
@@ -48,7 +64,7 @@
           size="mini"
           :disabled="single"
           @click="handleUpdate"
-          v-hasPermi="['system:history:edit']"
+          v-hasPermi="['system:news:edit']"
         >修改</el-button>
       </el-col>
       <el-col :span="1.5">
@@ -59,7 +75,7 @@
           size="mini"
           :disabled="multiple"
           @click="handleDelete"
-          v-hasPermi="['system:history:remove']"
+          v-hasPermi="['system:news:remove']"
         >删除</el-button>
       </el-col>
       <el-col :span="1.5">
@@ -69,15 +85,15 @@
           icon="el-icon-download"
           size="mini"
           @click="handleExport"
-          v-hasPermi="['system:history:export']"
+          v-hasPermi="['system:news:export']"
         >导出</el-button>
       </el-col>
       <right-toolbar :showSearch.sync="showSearch" @queryTable="getList"></right-toolbar>
     </el-row>
 
-    <el-table v-loading="loading" :data="historyList" @selection-change="handleSelectionChange">
+    <el-table v-loading="loading" :data="newsList" @selection-change="handleSelectionChange">
       <el-table-column type="selection" width="55" align="center" />
-      <el-table-column label="图片" width="150" align="center" prop="img">
+      <el-table-column label="图片" align="center" prop="img">
         <template slot-scope="scope">
           <el-image
             v-if="scope.row.img.length == 0"
@@ -102,11 +118,12 @@
           />
         </template>
       </el-table-column>
-      <el-table-column label="年份" width="100" align="center" prop="year" />
       <el-table-column label="名称" align="center" prop="name" />
-      <el-table-column label="介绍" align="left" prop="intro" >
+      <el-table-column label="作者" align="center" prop="author" />
+      <el-table-column label="描述" align="left" prop="remark" />
+      <el-table-column label="类型" align="center" prop="type" >
         <template slot-scope="scope">
-          <div v-html="scope.row.intro" />
+          {{dicts[scope.row.type].label}}
         </template>
       </el-table-column>
       <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
@@ -116,14 +133,14 @@
             type="text"
             icon="el-icon-edit"
             @click="handleUpdate(scope.row)"
-            v-hasPermi="['system:history:edit']"
+            v-hasPermi="['system:news:edit']"
           >修改</el-button>
           <el-button
             size="mini"
             type="text"
             icon="el-icon-delete"
             @click="handleDelete(scope.row)"
-            v-hasPermi="['system:history:remove']"
+            v-hasPermi="['system:news:remove']"
           >删除</el-button>
         </template>
       </el-table-column>
@@ -137,15 +154,34 @@
       @pagination="getList"
     />
 
-    <!-- 添加或修改发展历程对话框 -->
-    <el-dialog :title="title" :visible.sync="HistoryOpen" width="50%" append-to-body>
+    <!-- 添加或修改新闻对话框 -->
+    <el-dialog :title="title" :visible.sync="NewsOpen" width="50%" append-to-body>
       <el-form ref="form" :model="form" :rules="rules" label-width="80px">
-        <el-form-item label="年份" prop="year">
-          <el-input v-model="form.year" placeholder="请输入年份" />
-        </el-form-item>
         <el-form-item label="名称" prop="name">
           <el-input v-model="form.name" placeholder="请输入名称" />
         </el-form-item>
+        <el-form-item label="描述" prop="remark">
+          <el-input v-model="form.remark" type="textarea" placeholder="请输入内容" />
+        </el-form-item>
+        <el-row>
+          <el-col :span="12">
+            <el-form-item label="类型" prop="type">
+              <el-select v-model="form.type" placeholder="请选择类型">
+                <el-option
+                  v-for="item in dicts"
+                  :key="item.value"
+                  :label="item.label"
+                  :value="item.value">
+                </el-option>
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="作者" prop="author">
+              <el-input v-model="form.author" placeholder="请输入作者" />
+            </el-form-item>
+          </el-col>
+        </el-row>
         <el-form-item label="图片" prop="img">
           <p class="margin0" style="padding-bottom: 10px;">
             <el-button @click="openFile()">选择文件</el-button>
@@ -171,9 +207,12 @@
             />
           </span>
         </el-form-item>
-        <el-form-item label="介绍" prop="intro">
-          <Editor v-model="form.intro" :type="'custom'"
-                  :height="350" :minHeight="350" />
+        <el-form-item v-if="form.type == 0" label="超链接" prop="url">
+          <el-input v-model="form.url" placeholder="请输入超链接" />
+        </el-form-item>
+        <el-form-item v-else label="详情页" prop="text">
+          <Editor v-model="form.text" :type="'custom'"
+                   :height="750" :minHeight="750" />
         </el-form-item>
       </el-form>
       <div slot="footer" class="dialog-footer">
@@ -181,8 +220,6 @@
         <el-button @click="cancel">取 消</el-button>
       </div>
     </el-dialog>
-
-
     <!--  文件选择弹窗-->
     <material-dialog
       :dialogOpen="materialOpen" @updateDialogOpen="updateDialogOpen"
@@ -205,11 +242,12 @@
 </template>
 
 <script>
-import { listHistory, getHistory, delHistory, addHistory, updateHistory } from "@/api/system/history";
+import { listNews, getNews, delNews, addNews, updateNews } from "@/api/system/news";
 import MaterialDialog from '../../MaterialDialog'
 
+
 export default {
-  name: "History",
+  name: "News",
   components: { MaterialDialog },
   data() {
     return {
@@ -225,40 +263,43 @@ export default {
       showSearch: true,
       // 总条数
       total: 0,
-      // 发展历程表格数据
-      historyList: [],
+      // 新闻表格数据
+      newsList: [],
       // 弹出层标题
       title: "",
       // 是否显示弹出层
-      HistoryOpen: false,
+      NewsOpen: false,
       // 查询参数
       queryParams: {
         pageNum: 1,
         pageSize: 10,
-        year: null,
         name: null,
-        mark: 'zh_CN',
+        type: null,
+        author: null,
+        mark: 'en_US'
       },
       // 表单参数
       form: {},
       // 表单校验
       rules: {
-        year: [
-          { required: true, message: "年份不能为空", trigger: "blur" }
-        ],
         name: [
           { required: true, message: "名称不能为空", trigger: "blur" }
         ],
-        intro: [
-          { required: true, message: "介绍不能为空", trigger: "blur" }
+        img: [
+          { required: true, message: "图片不能为空", trigger: "blur" }
         ],
-        // img: [
-        //   { required: true, message: "图片不能为空", trigger: "blur" }
+        // author: [
+        //   { required: true, message: "作者不能为空", trigger: "blur" }
         // ],
+        type: [
+          { required: true, message: "类型不能为空", trigger: "change" }
+        ],
       },
       srcList:['#'],
-      dicts: null,
-      arr: [],
+      dicts:[
+        {label:"超链接",value:"0"},
+        {label:"详情页",value:"1"}
+      ],
       // 选择文件弹窗开关
       materialOpen: false,
       // 选择文件个数
@@ -271,27 +312,18 @@ export default {
     this.getList();
   },
   methods: {
-    /** 查询发展历程列表 */
+    /** 查询新闻列表 */
     getList() {
       this.loading = true;
-      listHistory().then(response => {
-        response.rows.forEach(item => {
-          this.arr.push(item.year)
-        })
-        this.dicts = Array.from(new Set(this.arr)).sort()
-      });
-      listHistory(this.queryParams).then(response => {
-        this.historyList = response.rows;
-        this.historyList.forEach(item => {
-          item.intro = decodeURIComponent(item.intro)
-        })
+      listNews(this.queryParams).then(response => {
+        this.newsList = response.rows;
         this.total = response.total;
         this.loading = false;
       });
     },
     // 取消按钮
     cancel() {
-      this.HistoryOpen = false;
+      this.NewsOpen = false;
       this.reset();
       this.getList()
     },
@@ -299,10 +331,12 @@ export default {
     reset() {
       this.form = {
         id: null,
-        year: null,
         name: null,
-        intro: null,
         img: null,
+        type: '1',
+        url: null,
+        author: '中揚新材',
+        text: "",
         createBy: null,
         createTime: null,
         updateBy: null,
@@ -330,18 +364,18 @@ export default {
     /** 新增按钮操作 */
     handleAdd() {
       this.reset();
-      this.HistoryOpen = true;
-      this.title = "添加发展历程";
+      this.NewsOpen = true;
+      this.title = "添加新闻";
     },
     /** 修改按钮操作 */
     handleUpdate(row) {
       this.reset();
       const id = row.id || this.ids
-      getHistory(id).then(response => {
+      getNews(id).then(response => {
         this.form = response.data;
-        this.HistoryOpen = true;
-        this.title = "修改发展历程";
-        this.form.intro = decodeURIComponent(this.form.intro)
+        this.NewsOpen = true;
+        this.title = "修改新闻";
+        this.form.text = decodeURIComponent(this.form.text)
         this.setSrcList(this.form.img)
       });
     },
@@ -349,20 +383,20 @@ export default {
     submitForm() {
       this.$refs["form"].validate(valid => {
         if (valid) {
-          this.form.mark = 'zh_CN'
-          this.form.intro = encodeURIComponent(this.form.intro)
+          this.form.mark = 'en_US'
+          this.form.text = encodeURIComponent(this.form.text)
           if (this.form.img !== null){
             this.form.img = JSON.stringify(this.form.img)
           }else {
             this.form.img = JSON.stringify([])
           }
           if (this.form.id != null) {
-            updateHistory(this.form).then(response => {
+            updateNews(this.form).then(response => {
               this.$modal.msgSuccess("修改成功");
               this.cancel()
             });
           } else {
-            addHistory(this.form).then(response => {
+            addNews(this.form).then(response => {
               this.$modal.msgSuccess("新增成功");
               this.cancel()
             });
@@ -374,7 +408,7 @@ export default {
     handleDelete(row) {
       const ids = row.id || this.ids;
       this.$modal.confirm('是否确认删除选中的数据项？').then(function() {
-        return delHistory(ids);
+        return delNews(ids);
       }).then(() => {
         this.getList();
         this.$modal.msgSuccess("删除成功");
@@ -382,9 +416,9 @@ export default {
     },
     /** 导出按钮操作 */
     handleExport() {
-      this.download('system/history/export', {
+      this.download('system/news/export', {
         ...this.queryParams
-      }, `history_${new Date().getTime()}.xlsx`)
+      }, `news_${new Date().getTime()}.xlsx`)
     },
     // 列表点击图片时触发，查看图片
     setSrcList(data) {
@@ -406,7 +440,6 @@ export default {
       this.dialogVisible = true
       this.dialogUrl = url
     }
-
   }
 };
 </script>

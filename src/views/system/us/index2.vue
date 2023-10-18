@@ -101,7 +101,7 @@
           </el-form-item>
           <el-form-item label="价值" prop="meaning">
             <p class="margin0" style="padding-bottom: 10px;">
-              <el-button @click="handleAdd()">添加</el-button>
+              <el-button @click="handleAdd()">新增</el-button>
             </p>
             <el-table :data="tableData" style="width: 50%" border>
               <el-table-column prop="name" align="center" label="名称">
@@ -310,7 +310,7 @@ export default {
   data(){
     return  {
       form:{
-        id:1,
+        id:2,
       },
       tableData:[],
       flag : -1,
@@ -349,7 +349,7 @@ export default {
   },
   methods:{
     getList() {
-      getUs(1).then(response => {
+      getUs(2).then(response => {
         this.form = response.data;
         if(this.form.meaning != null){
           this.tableData = this.form.meaning

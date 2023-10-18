@@ -123,7 +123,7 @@ export default {
   data(){
     return  {
       form:{
-        id:1,
+        id:2,
       },
       rules: {
         name: [{
@@ -147,7 +147,7 @@ export default {
   },
   methods:{
     getList() {
-      getIndexinfo(1).then(response => {
+      getIndexinfo(2).then(response => {
         this.form = response.data;
         console.log(this.form)
       });

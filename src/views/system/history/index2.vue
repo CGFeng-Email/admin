@@ -104,11 +104,11 @@
       </el-table-column>
       <el-table-column label="年份" width="100" align="center" prop="year" />
       <el-table-column label="名称" align="center" prop="name" />
-      <el-table-column label="介绍" align="left" prop="intro" >
-        <template slot-scope="scope">
-          <div v-html="scope.row.intro" />
-        </template>
-      </el-table-column>
+<!--      <el-table-column label="介绍" align="left" prop="intro" >-->
+<!--        <template slot-scope="scope">-->
+<!--          <div v-html="scope.row.intro" />-->
+<!--        </template>-->
+<!--      </el-table-column>-->
       <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
         <template slot-scope="scope">
           <el-button

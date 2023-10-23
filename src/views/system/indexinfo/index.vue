@@ -89,7 +89,7 @@
     <materal-dialog
       :dialogOpen="materialOpen1" @updateDialogOpen="updateDialogOpen"
       :img="form.logo" @updateImg="updateImg"
-      :number="number"
+      :number="2"
     />
     <materal-dialog
       :dialogOpen="materialOpen2" @updateDialogOpen="updateDialogOpen"

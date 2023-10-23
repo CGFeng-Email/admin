@@ -68,7 +68,7 @@ export const constantRoutes = [
     children: [
       {
         path: "index",
-        component: () => import("@/views/index"),
+        component: () => import("@/views/system/indexinfo/index"),
         name: "Index",
         meta: { title: "首页", icon: "dashboard", affix: true },
       },
@@ -122,6 +122,9 @@ Router.prototype.replace = function push(location) {
 
 export default new Router({
   mode: "history", // 去掉url中的#
+  // mode: 'hash', // hash模式
+  base:'/admin/',
   scrollBehavior: () => ({ y: 0 }),
   routes: constantRoutes,
 });
+

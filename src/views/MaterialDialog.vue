@@ -36,7 +36,7 @@
             <div class="content">
               <div class="content_head">
                 <div class="ch_left">
-                  <el-upload action="#" accept=".jpg,.jpeg,.png,.gif.JPG,.JPEG,.PBG,.GIF,.mp4,.MP4"
+                  <el-upload action="#" accept="image/svg+xml,.jpg,.jpeg,.png,.gif.JPG,.JPEG,.PBG,.GIF,.mp4,.MP4"
                              :show-file-list="false"
                              :on-change="upload_change" :multiple="true" :auto-upload="false">
                     <el-button size="small" type="primary">本地上传</el-button>
